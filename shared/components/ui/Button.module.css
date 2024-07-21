@@ -1,0 +1,224 @@
+.btn {
+  font: inherit;
+  padding: 0.5rem 1.5rem;
+  margin: 0.3rem;
+  border: 0px solid black !important;
+  border-radius: 6px;
+  background-color: #79aeca;
+  border: 2px solid #79aeca00 !important;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  color: white;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  font-family: "Roboto", sans-serif;
+  transition: all 0.5s;
+}
+
+.btn:disabled{
+  opacity: 0.6 !important;
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: #79aeca !important;
+  border: 2px solid #79aeca !important;
+}
+
+
+.btn-success-outline {
+  background-color: rgba(230, 230, 230, 0.4) !important;
+  color: rgb(25, 148, 0) !important;
+  font-weight: bolder;
+  border: 2px solid #199400 !important;
+}
+
+
+.btn-warning-outline {
+  background-color: transparent !important;
+  color: #feffb0 !important;
+  font-weight: bolder;
+  border: 2px solid #feffb0 !important;
+}
+
+
+.btn-light-outline {
+  background-color: transparent !important;
+  color: #ffffff !important;
+  font-weight: bolder;
+  border: 2px solid #ffffff !important;
+}
+.btn-secondary-outline {
+  background-color: transparent !important;
+  color: rgb(112, 112, 112) !important;
+  font-weight: bolder;
+  border: 2px solid rgb(112, 112, 112) !important;
+}
+
+
+.btn-danger-outline {
+  background-color: transparent !important;
+  color: #d65858 !important;
+  font-weight: bolder;
+  border: 2px solid #d32f2f !important;
+}
+
+
+.btn-circle-outline {
+  border-radius: 50px !important;
+  background-color: transparent !important;
+  color: #d65858 !important;
+  font-weight: bolder;
+  border: 2px solid #fff !important;
+}
+
+
+.btn-nothing {
+  color: white;
+  background-color: rgba(0, 0, 0, 0) !important;
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+
+.btn-nothing-circle {
+  color: white;
+  padding: 5px !important;
+  border-radius: 50px !important;
+  background-color: rgba(0, 0, 0, 0) !important;
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+
+.btn-nothing-outline {
+  color: white;
+  background-color: rgba(0, 0, 0, 0) !important;
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+
+.btn-danger {
+  background-color: #d32f2f !important;
+  border: 2px solid #b71c1c !important;
+}
+
+
+.btn-light {
+  background-color: #fff !important;
+  border: 2px solid #fff !important;
+  color: #79aeca !important;
+}
+
+
+.btn-success {
+  background-color: #199400 !important;
+  border: 2px solid #199400 !important;
+}
+
+
+.btn:disabled{
+  background-color: #ccc;
+  filter: grayscale(100);
+  color: #979797;
+  opacity: 0.5 ;
+  border-color: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-xs {
+  font-size: 0.6rem;
+  margin: 0px !important;
+  padding: 5px 20px 5px 20px !important;
+}
+
+.btn-sm {
+  font-size: 0.8rem;
+}
+
+.btn-md {
+  font-size: 1.2rem;
+  padding: 10px 50px 10px 50px;
+}
+
+.btn-lg {
+  font-size: 1.5rem;
+  padding: 10px 50px 10px 50px;
+}
+
+.btn-xl {
+  font-size: 1.8rem;
+  padding: 10px 50px 10px 50px;
+}
+
+.btn-wide {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .btn-wide {
+    width: 100%;
+    margin-bottom: 5px;
+    padding: 10px 50px 10px 50px;
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    scale: 0%;
+  }
+  20% {
+    opacity: 0;
+    scale: 90%;
+  }
+  40% {
+    opacity: 1;
+    scale: 102%;
+  }
+  100% {
+    opacity: 1;
+    scale: 100%;
+  }
+}
+
+.btn-overflow {
+  padding: 10px;
+  font-size: 30px;
+  font-weight: 900;
+  position: fixed;
+  border-radius: 10px;
+  box-shadow: 0 5px 10px 5px rgba(0, 0, 0, 0.2) !important;
+  right: 30px;
+  bottom: 30px;
+  z-index: 2;
+}
+
+.btn-overflow-circle {
+  padding: 10px;
+  font-size: 30px;
+  font-weight: 900;
+  width: 10vh;
+  height: 10vh;
+  position: fixed;
+  border-radius: 50%;
+  box-shadow: 0 5px 10px 5px rgba(0, 0, 0, 0.2) !important;
+  right: 30px;
+  bottom: 30px;
+  z-index: 2;
+}
+
+
+@media (max-width: 768px) {
+  .btn-overflow {
+    padding: 5px;
+    font-size: 60px;
+    font-weight: 900;
+    position: fixed;
+    border-radius: 50px;
+    box-shadow: 0 5px 10px 5px rgba(0, 0, 0, 0.2) !important;
+    right: 20px;
+    bottom: 50px;
+    z-index: 2;
+  }
+}
+
+

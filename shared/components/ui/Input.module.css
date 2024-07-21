@@ -1,0 +1,58 @@
+.form-control {
+  margin: 5px;
+}
+
+.form-control label,
+.form-control input,
+.form-control textarea {
+  display: block;
+  border-radius: 6px;
+  color: #79aeca;
+}
+
+.form-control label {
+  margin: 0 0 5px 5px;
+  font-weight: bold;
+  font: inherit;
+}
+
+.form-control input,
+.form-control textarea {
+  width: 100%;
+  font: inherit;
+  border: 2px solid #ccc;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  background-color: rgba(248, 248, 248, 0.6);
+  padding: 0.6rem 1rem;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  resize: none;
+}
+
+.form-control label,
+.form-control p {
+  color: #79aeca;
+}
+
+.form-control--invalid label,
+.form-control--invalid p {
+  color: #d32f2f;
+}
+
+.form-control--invalid span {
+  color: #d32f2f;
+  background-color: #ffcdd5;
+  border-left: 5px solid #d32f2f;
+  border-radius: 6px;
+  box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.2);
+  padding: 5px 10px 5px 10px;
+  font-size: 14px;
+}
+
+.form-control--invalid input,
+.form-control--invalid textarea {
+  border-color: #d32f2f;
+  margin-bottom: 5px;
+  background-color: #ffd1d1;
+}

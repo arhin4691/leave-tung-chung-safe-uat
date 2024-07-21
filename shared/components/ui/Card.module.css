@@ -1,0 +1,23 @@
+.card {
+  border-radius: 6px;
+  margin: 5px;
+  background-color: #ffffff99;
+  /* opacity: 0.6; */
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  animation-name: background-in;
+  animation-duration: 1s;
+  animation-fill-mode: forwards;
+  transition: all 0.2s;
+}
+
+.not_card {
+  border-radius: 6px;
+  margin: 5px;
+  background-color: #ffffff !important;
+  opacity: 0.6;
+  box-shadow: 0 0 0 0 !important;
+  animation-name: background-in;
+  animation-duration: 1s;
+  animation-fill-mode: forwards;
+  transition: all 0.2s;
+}

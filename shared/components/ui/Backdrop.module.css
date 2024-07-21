@@ -1,0 +1,14 @@
+.backdrop {
+  position: fixed;
+  z-index: 90;
+}
+
+@keyframes bg-in {
+  0%   {background-color:rgba(0, 0, 0, 0);}
+  100% {background-color:rgba(0, 0, 0, 0.5);}
+}
+
+@keyframes bg-out {
+  0%   {background-color:rgba(0, 0, 0, 0.5);}
+  100% {background-color:rgba(0, 0, 0, 0);}
+}

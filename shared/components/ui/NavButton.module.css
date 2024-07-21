@@ -1,0 +1,302 @@
+.buttoncontainer {
+  position: fixed;
+  display: flex;
+  justify-content: center;
+  flex-direction: row-reverse;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.mainbutton {
+  text-align: center;
+  padding: auto;
+  width: 100px;
+  height: 100px;
+  line-height: 95px;
+  border-radius: 50%;
+  border: 5px solid white;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  background-color: white;
+  color: white;
+  font-size: 65px;
+  animation: rainbow infinite linear alternate-reverse;
+  animation-duration: 2s;
+  transition-duration: 0.5s;
+}
+
+.mainbutton:hover {
+  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+  transition-duration: 0.5s;
+}
+
+.mainbutton:active {
+  width: 90px;
+  height: 90px;
+  line-height: 90px;
+  font-size: 60px;
+  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+  transition-duration: 0.5s;
+}
+
+.smallbutton {
+  text-align: center;
+  width: 80px;
+  height: 80px;
+  line-height: 80px;
+  margin: 0 20px 20px 20px;
+  background-color: #79aeca;
+  color: white;
+  font-size: 15px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: fadeInMove 0.2s ease-in-out;
+  animation-delay: var(--delay);
+}
+
+.smallbutton:active {
+  width: 70px;
+  height: 70px;
+  line-height: 70px;
+  font-size: 14px;
+  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+  transition-duration: 0.5s;
+}
+
+.smallbutton:first-of-type {
+  margin-right: 10px;
+}
+
+.smallbutton:last-of-type {
+  margin-left: 10px;
+}
+
+.smallbutton:hover {
+  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+  transition-duration: 0.5s;
+}
+.smallbutton.hide {
+  animation: fadeOutMove 0.2s ease-in-out forwards;
+  animation-delay: var(--delay);
+}
+
+.smallbutton[data-delay="0"] {
+  --delay: 0ms;
+}
+
+.smallbutton[data-delay="100"] {
+  --delay: 100ms;
+}
+
+.smallbutton[data-delay="50"] {
+  --delay: 50ms;
+}
+
+.upperbutton{
+  text-align: center;
+  width: 80px;
+  height: 80px;
+  line-height: 90px;
+  margin: 0 20px 100px 20px;
+  background-color: #79aeca;
+  color: white;
+  font-size: 50px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: upperfadeInMove 0.2s ease-in-out;
+  animation-delay: var(--delay);
+}
+
+.upperbutton:first-of-type {
+  margin-right: 10px;
+}
+
+.upperbutton:last-of-type {
+  margin-left: 10px;
+}
+
+.upperbutton:hover {
+  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+  transition-duration: 0.5s;
+}
+.upperbutton.hide {
+  animation: upperfadeOutMove 0.2s ease-in-out forwards;
+  animation-delay: var(--delay);
+}
+
+.upperbutton:active {
+  width: 70px;
+  height: 70px;
+  line-height: 80px;
+  font-size: 50px;
+  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+  transition-duration: 0.5s;
+}
+
+
+.upperbutton[data-delay="0"] {
+  --delay: 0ms;
+}
+
+.upperbutton[data-delay="100"] {
+  --delay: 100ms;
+}
+
+.upperbutton[data-delay="50"] {
+  --delay: 50ms;
+}
+
+.green {
+  background-color: #43a16e;
+}
+
+.yellow {
+  background-color: #ce9e00;
+}
+
+.red {
+  background-color: #c94433;
+}
+.blue {
+  background-color: #338dc9;
+}
+
+@media (min-width: 1024px) {
+  .buttoncontainer {
+    left: auto;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .mainbutton {
+    text-align: center;
+    padding: auto;
+    width: 150px;
+    height: 150px;
+    line-height: 150px;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    background-color: white;
+    font-size: 100px;
+    transition-duration: 0.5s;
+  }
+  .mainbutton:active {
+    width: 130px;
+    height: 130px;
+    line-height: 140px;
+    font-size: 90px;
+    box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+    transition-duration: 0.5s;
+  }
+
+  .smallbutton {
+    width: 100px;
+    height: 100px;
+    color: white;
+    line-height: 100px;
+    font-size: 18px;
+    transition-duration: 0.5s;
+  }
+
+  .smallbutton:active {
+    width: 90px;
+    height: 90px;
+    line-height: 90px;
+    font-size: 14px;
+    margin: 20px;
+    box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+    transition-duration: 0.5s;
+  }
+
+  .upperbutton {
+    width: 100px;
+    height: 100px;
+    margin: 0 20px 150px 20px;
+    line-height: 110px;
+    font-size: 60px;
+  }
+
+  .upperbutton:active {
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    font-size: 50px;
+    box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
+    transition-duration: 0.5s;
+  }
+}
+
+@keyframes fadeInMove {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOutMove {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+}
+
+@keyframes upperfadeInMove {
+  from {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes upperfadeOutMove {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+}
+
+@keyframes rainbow {
+  0% {
+    border-color: #7ecdf7;
+  }
+  14% {
+    border-color: #6ac9fc;
+  }
+  28% {
+    border-color: #54c3ff;
+  }
+  42% {
+    border-color: #1bafff;
+  }
+  57% {
+    border-color: #00a6ff;
+  }
+  71% {
+    border-color: #00c056;
+  }
+  85% {
+    border-color: #00e632;
+  }
+  100%{
+    border-color: #00e632;
+  }
+}
