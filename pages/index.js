@@ -28,7 +28,7 @@ export default function Home(props) {
   }, []);
 
   //About Handler
-  const [showAbout, setShowAbout] = useState(false);
+  const [showAbout, setShowAbout] = useState(false); 
   const openAboutHandler = () => {
     setShowAbout(true);
   };
