@@ -4,7 +4,6 @@ import BusFavList from "@/shared/components/bus_routes/components/BusFavList";
 import AboutModal from "@/shared/components/home/components/AboutModal";
 import { UpdateContext } from "@/shared/context/update-context";
 import { Grid } from "@mui/material";
-import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import RoadStatus from "@/shared/components/home/RoadStatus";
@@ -95,43 +94,10 @@ export default function Home() {
         animate="visible"
         style={{ padding: "12px 8px" }}
       >
-        {/* ── Hero logo ───────────────────────────────── */}
-        {/* <motion.div variants={itemVariants}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: "16px 0 8px",
-            }}
-          >
-            <motion.div
-              whileHover={{ scale: 1.06 }}
-              whileTap={{ scale: 0.94 }}
-              onClick={() => setShowAbout(true)}
-              style={{
-                cursor: "pointer",
-                padding: "14px 28px",
-                borderRadius: "var(--radius-lg, 22px)",
-                background: "var(--glass-bg)",
-                backdropFilter: "var(--glass-blur)",
-                WebkitBackdropFilter: "var(--glass-blur)",
-                border: "1px solid var(--glass-border)",
-                boxShadow: "var(--glass-shadow)",
-              }}
-            >
-              <Image src="/files/images/logo.png" alt="東涌出行" width={80} height={53} priority />
-            </motion.div>
-          </div>
-        </motion.div> */}
-
         <Grid container spacing={1}>
           {/* ── Favourites ──────────────────────────── */}
           <Grid item xs={12} md={4}>
             <motion.div variants={itemVariants}>
-              {/* Render only after mount so SSR and initial client render
-                  both output an empty shell — prevents hydration mismatch
-                  caused by localStorage data being unavailable on the server. */}
               {mounted ? (
                 <BusFavList
                   data={safeParse(likedItem)}

@@ -330,8 +330,8 @@ const BusPageClient: React.FC<BusPageClientProps> = ({
             background: "transparent",
             border: "none",
             outline: "none",
-            color: "rgba(255,255,255,0.92)",
-            fontSize: "15px",
+            color: "var(--text-primary)",
+            fontSize: "16px", /* ≥16px prevents iOS/Android auto-zoom on focus */
             padding: "12px 0",
             fontFamily: "inherit",
             cursor: isMobile ? "pointer" : undefined,

@@ -2,7 +2,6 @@
 
 import React, { useEffect } from "react";
 import { toast } from "react-toastify";
-import classes from "./InitToast.module.css";
 
 interface InitToastProps {
   message: string;
@@ -24,12 +23,12 @@ const InitToast: React.FC<InitToastProps> = (props) => {
       draggable: true,
       progress: undefined,
       theme: "colored",
-      className: classes[props.className ?? ""],
+      className: props.className,
     };
     if (props.type === "success") toast.success(props.message, { ...opts, toastId: "success1" });
-    if (props.type === "info") toast.info(props.message, { ...opts, toastId: "info1" });
-    if (props.type === "warning") toast.warn(props.message, { ...opts, toastId: "warn1" });
-    if (props.type === "error") toast.error(props.message, { ...opts, toastId: "error1" });
+    if (props.type === "info")    toast.info(props.message,    { ...opts, toastId: "info1" });
+    if (props.type === "warning") toast.warn(props.message,    { ...opts, toastId: "warn1" });
+    if (props.type === "error")   toast.error(props.message,   { ...opts, toastId: "error1" });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

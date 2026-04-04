@@ -21,7 +21,7 @@
 .form-control textarea {
   width: 100%;
   font: inherit;
-  font-size: 15px;
+  font-size: 16px; /* must be ≥ 16px — prevents iOS/Android auto-zoom on focus */
   border: 1px solid var(--glass-border, rgba(255,255,255,0.13));
   border-radius: var(--radius-sm, 10px);
   background: var(--glass-bg, rgba(255,255,255,0.07));

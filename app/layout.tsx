@@ -18,9 +18,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-/** Inline script: apply saved theme before first paint to prevent flash.
- * Uses 'themeV2' key so old auto-stored system-preference values are ignored
- * and everyone gets dark mode by default. */
+/** Anti-flash: apply saved theme before first paint (dark default). */
 const themeScript = `(function(){try{var t=localStorage.getItem('themeV2');if(t!=='light'&&t!=='dark')t='dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`;
 
 export default function RootLayout({
@@ -57,16 +55,11 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {/* Anti-flash: reads localStorage and sets data-theme BEFORE React hydrates.
-            strategy="beforeInteractive" places this in <head> outside the React tree
-            so React 19 never encounters it during reconciliation → no script warning,
-            no hydration mismatch. */}
         <Script
           id="theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: themeScript }}
         />
-        {/* Google AdSense — non-blocking, loads after the page is interactive */}
         <Script
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3107922640573943"
           strategy="afterInteractive"
@@ -74,7 +67,6 @@ export default function RootLayout({
         />
         <ThemeProvider>
           <LocaleProvider>
-            {/* Mobile: paddingBottom for bottom nav. Desktop: paddingLeft for sidebar. */}
             <div className="app-content">{children}</div>
             <NavButton />
             <ToastProvider />

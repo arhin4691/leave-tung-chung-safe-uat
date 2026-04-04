@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import BusRoutesList from "./components/BusRoutesList";
 import Input from "../ui/Input";
 import { Grid } from "@mui/material";
-import MtrRoutes from "./components/MtrRoutes";
 import InitToast from "../ui/InitToast";
 import type { BusRoute } from "@/shared/types";
 import { useLocale } from "@/shared/context/locale-context";
@@ -31,8 +30,6 @@ function compare(a: BusRoute, b: BusRoute) {
   if (a.busRoute > b.busRoute) return 1;
   return 0;
 }
-
-const BUS_ROUTES_FUTONG_NLB: BusRoute[] = [];
 
 const COMPANY_FILTERS: { label: string; value: Company }[] = [
   { label: "全部", value: "ALL" },
@@ -120,9 +117,11 @@ const BusRoutes: React.FC<BusRoutesProps> = (props) => {
                 cursor: "pointer",
                 fontFamily: "inherit",
                 transition: "all 0.18s",
-                background: company === value ? "rgba(10,132,255,0.28)" : "rgba(255,255,255,0.07)",
-                color: company === value ? "#60b8ff" : "rgba(255,255,255,0.60)",
-                borderColor: company === value ? "rgba(10,132,255,0.55)" : "rgba(255,255,255,0.15)",
+                background: company === value ? "var(--accent-blue-dim)" : "var(--glass-bg)",
+                color: company === value ? "var(--accent-blue)" : "var(--text-secondary)",
+                borderColor: company === value
+                  ? "color-mix(in srgb, var(--accent-blue) 55%, transparent)"
+                  : "var(--glass-border)",
               }}
             >
               {label}
@@ -130,8 +129,6 @@ const BusRoutes: React.FC<BusRoutesProps> = (props) => {
           ))}
         </div>
       </div>
-
-      {keyword === "" && <MtrRoutes />}
 
       <BusRoutesList
         keyword={keyword}
@@ -171,7 +168,7 @@ const BusRoutes: React.FC<BusRoutesProps> = (props) => {
       <BusRoutesList
         keyword={keyword}
         routes={filterKmbCtb([...props.kmbCtbFutong].sort(compare))}
-        nlbRoutes={filterNlb([...BUS_ROUTES_FUTONG_NLB].sort(compare))}
+        nlbRoutes={[]}
         stopName="富東廣場 (東涌站D出口對面馬路)"
         location="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d923.3413148508455!2d113.94531757721581!3d22.277360744059838!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjLCsDE2JzM4LjUiTiAxMTPCsDU2JzQ0LjEiRQ!5e0!3m2!1szh-TW!2shk!4v1675957928165!5m2!1szh-TW!2shk"
       />
