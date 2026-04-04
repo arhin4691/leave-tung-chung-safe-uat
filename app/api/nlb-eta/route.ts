@@ -1,0 +1,51 @@
+import { NextRequest, NextResponse } from "next/server";
+
+const NLB_BASE = "https://rt.data.gov.hk/v2/transport/nlb";
+
+/**
+ * GET /api/nlb-eta?routeId=X&stops=S1,S2,S3
+ * Batch-fetches ETA for multiple NLB stops in one request.
+ * Returns: { etas: { [stopId]: any[] } }
+ */
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  const routeId = searchParams.get("routeId");
+  const stopsParam = searchParams.get("stops");
+
+  if (!routeId || !stopsParam) {
+    return NextResponse.json({ error: "Missing routeId or stops param" }, { status: 400 });
+  }
+
+  const stopIds = stopsParam.split(",").filter(Boolean);
+
+  if (stopIds.length === 0) {
+    return NextResponse.json({ etas: {} });
+  }
+
+  try {
+    const results = await Promise.all(
+      stopIds.map((stopId) =>
+        fetch(
+          `${NLB_BASE}/stop.php?action=estimatedArrivals&routeId=${routeId}&stopId=${stopId}&language=zh`
+        )
+          .then((r) => r.json())
+          .then((j) => ({ stopId, data: j.estimatedArrivals ?? [] }))
+          .catch(() => ({ stopId, data: [] }))
+      )
+    );
+
+    const etas: Record<string, any[]> = {};
+    for (const { stopId, data } of results) {
+      etas[stopId] = data;
+    }
+
+    return NextResponse.json(
+      { etas },
+      {
+        headers: { "Cache-Control": "s-maxage=15, stale-while-revalidate=30" },
+      }
+    );
+  } catch {
+    return NextResponse.json({ error: "Upstream error" }, { status: 502 });
+  }
+}

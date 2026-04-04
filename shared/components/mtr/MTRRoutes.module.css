@@ -1,0 +1,332 @@
+/* ── MTR Routes — Liquid Glass UI ──────────────────────────────── */
+
+.page {
+  padding: 12px 12px 120px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── Page header ──────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 4px 12px;
+}
+
+.headerIcon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.headerTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ── Line grid ────────────────────────────────────────────────── */
+.lineGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* ── Line card ────────────────────────────────────────────────── */
+.lineCard {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.lineCard:hover {
+  border-color: var(--line-color, var(--glass-border-hover));
+  box-shadow: 0 0 0 1px var(--line-color, transparent), var(--glass-shadow-lg);
+}
+
+.lineCardSelected {
+  /* Solid outline ring + subtle line-colour tint on the card background. */
+  border-color: var(--line-color);
+  background: color-mix(in srgb, var(--line-color, transparent) 12%, var(--glass-bg));
+  box-shadow:
+    0 0 0 2px var(--line-color),
+    var(--glass-shadow-lg);
+}
+
+.lineCardGlow {
+  /* Decorative colour overlay — must sit BELOW all text content. */
+  position: absolute;
+  inset: 0;
+  opacity: 0.15;
+  pointer-events: none;
+  border-radius: inherit;
+  /* z-index -1 keeps it behind the lineCode / lineName spans */
+  z-index: 0;
+}
+
+.lineCode,
+.lineName {
+  position: relative;
+  z-index: 1;
+}
+
+.lineCode {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--line-color);
+  background: color-mix(in srgb, var(--line-color) 15%, transparent);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+}
+
+.lineName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  text-align: left;
+}
+
+/* ── Station section ──────────────────────────────────────────── */
+.stationSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 8px;
+}
+
+.linePill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.loadingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* ── Station list ─────────────────────────────────────────────── */
+.stationList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Station card ─────────────────────────────────────────────── */
+.stationCard {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.stationCardSelected {
+  /* Tinted border + background using the line's brand colour.
+     color-mix() keeps alpha compositing correct on both themes.
+     Falls back to glass defaults if --line-color is not set. */
+  border-color: var(--line-color, var(--glass-border-hover));
+  background: color-mix(in srgb, var(--line-color, transparent) 10%, var(--glass-bg));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--line-color, transparent) 40%, transparent),
+    var(--glass-shadow-lg);
+}
+
+.stationHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.stationBadge {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stationCode {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.stationInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stationName {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lineTag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+}
+
+.chevron {
+  font-size: 14px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ── ETA detail ───────────────────────────────────────────────── */
+.etaDetail {
+  overflow: hidden;
+  border-top: 1px solid var(--glass-border);
+  padding: 12px 14px;
+}
+
+.noService {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 4px 0;
+}
+
+.etaColumns {
+  display: flex;
+  gap: 20px;
+}
+
+.etaCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dirLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+/* ── ETA row ──────────────────────────────────────────────────── */
+.etaRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.etaRowLg .etaMins {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.etaMins {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s;
+}
+
+.etaNow {
+  color: var(--accent-green);
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.etaSoon {
+  color: var(--accent-yellow);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.etaPlat {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* ── Service hours footnote ───────────────────────────────────── */
+.serviceHours {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .lineGrid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+  }
+  .etaColumns {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .headerTitle {
+    font-size: 20px;
+  }
+}

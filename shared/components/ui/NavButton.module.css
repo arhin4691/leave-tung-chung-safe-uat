@@ -1,302 +1,310 @@
-.buttoncontainer {
-  position: fixed;
-  display: flex;
-  justify-content: center;
-  flex-direction: row-reverse;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
+﻿/* ── Liquid Glass Navigation Dock — v2 ─────────────────────── */
+
+/* ── Dock pill container ──────────────────────────────────────── */
+.dock {
+  /* Mobile: fixed bottom bar (inline styles in NavButton.tsx drive position)   */
 }
 
-.mainbutton {
-  text-align: center;
-  padding: auto;
-  width: 100px;
-  height: 100px;
-  line-height: 95px;
-  border-radius: 50%;
-  border: 5px solid white;
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-  background-color: white;
-  color: white;
-  font-size: 65px;
-  animation: rainbow infinite linear alternate-reverse;
-  animation-duration: 2s;
-  transition-duration: 0.5s;
+[data-theme="dark"] .dock {
+  background: rgba(8, 8, 14, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.65),
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-.mainbutton:hover {
-  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-  transition-duration: 0.5s;
+[data-theme="light"] .dock {
+  background: rgba(248, 250, 255, 0.82);
+  border-color: rgba(0, 0, 0, 0.09);
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.16),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
-.mainbutton:active {
-  width: 90px;
-  height: 90px;
-  line-height: 90px;
-  font-size: 60px;
-  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-  transition-duration: 0.5s;
-}
-
-.smallbutton {
-  text-align: center;
-  width: 80px;
-  height: 80px;
-  line-height: 80px;
-  margin: 0 20px 20px 20px;
-  background-color: #79aeca;
-  color: white;
-  font-size: 15px;
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-  border-radius: 50%;
-  border: 2px solid white;
-  animation: fadeInMove 0.2s ease-in-out;
-  animation-delay: var(--delay);
-}
-
-.smallbutton:active {
-  width: 70px;
-  height: 70px;
-  line-height: 70px;
-  font-size: 14px;
-  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-  transition-duration: 0.5s;
-}
-
-.smallbutton:first-of-type {
-  margin-right: 10px;
-}
-
-.smallbutton:last-of-type {
-  margin-left: 10px;
-}
-
-.smallbutton:hover {
-  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-  transition-duration: 0.5s;
-}
-.smallbutton.hide {
-  animation: fadeOutMove 0.2s ease-in-out forwards;
-  animation-delay: var(--delay);
-}
-
-.smallbutton[data-delay="0"] {
-  --delay: 0ms;
-}
-
-.smallbutton[data-delay="100"] {
-  --delay: 100ms;
-}
-
-.smallbutton[data-delay="50"] {
-  --delay: 50ms;
-}
-
-.upperbutton{
-  text-align: center;
-  width: 80px;
-  height: 80px;
-  line-height: 90px;
-  margin: 0 20px 100px 20px;
-  background-color: #79aeca;
-  color: white;
-  font-size: 50px;
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-  border-radius: 50%;
-  border: 2px solid white;
-  animation: upperfadeInMove 0.2s ease-in-out;
-  animation-delay: var(--delay);
-}
-
-.upperbutton:first-of-type {
-  margin-right: 10px;
-}
-
-.upperbutton:last-of-type {
-  margin-left: 10px;
-}
-
-.upperbutton:hover {
-  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-  transition-duration: 0.5s;
-}
-.upperbutton.hide {
-  animation: upperfadeOutMove 0.2s ease-in-out forwards;
-  animation-delay: var(--delay);
-}
-
-.upperbutton:active {
-  width: 70px;
-  height: 70px;
-  line-height: 80px;
-  font-size: 50px;
-  box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-  transition-duration: 0.5s;
-}
-
-
-.upperbutton[data-delay="0"] {
-  --delay: 0ms;
-}
-
-.upperbutton[data-delay="100"] {
-  --delay: 100ms;
-}
-
-.upperbutton[data-delay="50"] {
-  --delay: 50ms;
-}
-
-.green {
-  background-color: #43a16e;
-}
-
-.yellow {
-  background-color: #ce9e00;
-}
-
-.red {
-  background-color: #c94433;
-}
-.blue {
-  background-color: #338dc9;
-}
-
-@media (min-width: 1024px) {
-  .buttoncontainer {
-    left: auto;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
+/* ── Desktop sidebar override ─────────────────────────────────── */
+@media (min-width: 768px) {
+  .dock {
+    /* Override framer-motion's fixed bottom positioning */
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    right: auto !important;
+    width: 220px !important;
+    height: 100dvh !important;
+    /* Clear mobile transform — framer slide-up will still play on load */
+    transform: none !important;
+    border-right: 1px solid;
+    border-bottom: none;
+    border-top: none;
+    backdrop-filter: blur(40px) saturate(160%);
+    -webkit-backdrop-filter: blur(40px) saturate(160%);
+  }
+  [data-theme="dark"] .dock {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  [data-theme="light"] .dock {
+    border-color: rgba(0, 0, 0, 0.08);
   }
 
-  .mainbutton {
-    text-align: center;
-    padding: auto;
-    width: 150px;
-    height: 150px;
-    line-height: 150px;
-    border-radius: 50%;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-    background-color: white;
-    font-size: 100px;
-    transition-duration: 0.5s;
+  /* The MUI Grid inside the dock — change from horizontal to vertical */
+  .dock :global(.MuiGrid-container) {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    height: 100%;
+    padding: 24px 12px 16px;
+    gap: 4px !important;
   }
-  .mainbutton:active {
-    width: 130px;
-    height: 130px;
-    line-height: 140px;
-    font-size: 90px;
-    box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-    transition-duration: 0.5s;
+  .dock :global(.MuiGrid-item) {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-basis: auto !important;
   }
 
-  .smallbutton {
-    width: 100px;
-    height: 100px;
-    color: white;
-    line-height: 100px;
+  /* App title / branding at top */
+  .dock::before {
+    content: "東涌出行";
+    display: block;
+    padding: 20px 16px 16px;
     font-size: 18px;
-    transition-duration: 0.5s;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: -0.02em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 8px;
   }
+  [data-theme="light"] .dock::before {
+    color: rgba(0, 0, 0, 0.85);
+    border-color: rgba(0, 0, 0, 0.07);
+  }
+}
 
-  .smallbutton:active {
-    width: 90px;
-    height: 90px;
-    line-height: 90px;
+/* ── Individual nav item (the <Link>) ─────────────────────────── */
+.item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 13px;
+  border-radius: 9999px;
+  cursor: pointer;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.4);
+  min-width: 52px;
+  transition: color 0.18s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.item:hover {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.itemActive {
+  color: #ff375f;
+}
+
+.itemActive:hover {
+  color: #ff375f;
+}
+
+[data-theme="light"] .item {
+  color: rgba(0, 0, 0, 0.36);
+}
+[data-theme="light"] .item:hover {
+  color: rgba(0, 0, 0, 0.7);
+}
+[data-theme="light"] .itemActive {
+  color: #d90f3a;
+}
+[data-theme="light"] .itemActive:hover {
+  color: #d90f3a;
+}
+
+/* Desktop: nav items horizontal → vertical rows */
+@media (min-width: 768px) {
+  .item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    min-width: unset;
+    width: 100%;
     font-size: 14px;
-    margin: 20px;
-    box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-    transition-duration: 0.5s;
   }
-
-  .upperbutton {
-    width: 100px;
-    height: 100px;
-    margin: 0 20px 150px 20px;
-    line-height: 110px;
-    font-size: 60px;
-  }
-
-  .upperbutton:active {
-    width: 80px;
-    height: 80px;
-    line-height: 80px;
-    font-size: 50px;
-    box-shadow: 0 10px 10px 0 rgba(0, 0, 0, 0.2);
-    transition-duration: 0.5s;
+  .settingsNavItem {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    width: 100%;
   }
 }
 
-@keyframes fadeInMove {
-  from {
-    opacity: 0;
-    transform: translateY(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+/* ── Animated active pill ─────────────────────────────────────── */
+.activePill {
+  position: absolute;
+  inset: 0;
+  border-radius: 1vh;
+  background: rgba(255, 55, 95, 0.16);
+  border: 1px solid rgba(255, 55, 95, 0.3);
+  box-shadow: 0 0 18px rgba(255, 55, 95, 0.22);
+  pointer-events: none;
+}
+
+[data-theme="light"] .activePill {
+  background: rgba(217, 15, 58, 0.1);
+  border-color: rgba(217, 15, 58, 0.22);
+  box-shadow: 0 0 14px rgba(217, 15, 58, 0.14);
+}
+
+@media (min-width: 768px) {
+  .activePill {
+    border-radius: 12px;
   }
 }
 
-@keyframes fadeOutMove {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(50px);
+/* ── Icon + label ─────────────────────────────────────────────── */
+.itemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.itemLabel {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 56px;
+}
+
+@media (min-width: 768px) {
+  .itemLabel {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0;
+    max-width: none;
   }
 }
 
-@keyframes upperfadeInMove {
-  from {
-    opacity: 0;
-    transform: translateY(100px);
+/* ── Settings nav item (5th item — styled identically to Link items) ── */
+.settingsNavItem {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Settings section separator on desktop */
+@media (min-width: 768px) {
+  .settingsSeparator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 8px 16px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  [data-theme="light"] .settingsSeparator {
+    background: rgba(0, 0, 0, 0.07);
   }
 }
 
-@keyframes upperfadeOutMove {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(100px);
+/* ── Settings popover ─────────────────────────────────────────── */
+.settingsPopover {
+  translate: -50% 0;
+  min-width: 196px;
+  max-width: calc(100vw - 32px);
+  padding: 10px;
+
+  background: rgba(10, 10, 18, 0.92);
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 20px;
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transform-origin: center bottom;
+}
+
+[data-theme="light"] .settingsPopover {
+  background: rgba(248, 250, 255, 0.94);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Desktop: popover appears to the right of the sidebar (not above) */
+@media (min-width: 768px) {
+  .settingsPopover {
+    translate: 0 0;
+    transform-origin: left center;
   }
 }
 
-@keyframes rainbow {
-  0% {
-    border-color: #7ecdf7;
-  }
-  14% {
-    border-color: #6ac9fc;
-  }
-  28% {
-    border-color: #54c3ff;
-  }
-  42% {
-    border-color: #1bafff;
-  }
-  57% {
-    border-color: #00a6ff;
-  }
-  71% {
-    border-color: #00c056;
-  }
-  85% {
-    border-color: #00e632;
-  }
-  100%{
-    border-color: #00e632;
-  }
+/* ── Popover rows ─────────────────────────────────────────────── */
+.popoverRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.popoverRow:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+.popoverRow:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="light"] .popoverRow {
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.78);
+}
+[data-theme="light"] .popoverRow:hover {
+  background: rgba(0, 0, 0, 0.09);
+}
+[data-theme="light"] .popoverRow:active {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.popoverAccessory {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+[data-theme="light"] .popoverAccessory {
+  color: rgba(0, 0, 0, 0.4);
 }

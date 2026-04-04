@@ -6,38 +6,54 @@
 .form-control input,
 .form-control textarea {
   display: block;
-  border-radius: 6px;
-  color: #79aeca;
+  border-radius: var(--radius-sm, 10px);
 }
 
 .form-control label {
   margin: 0 0 5px 5px;
-  font-weight: bold;
+  font-weight: 600;
   font: inherit;
+  color: var(--text-secondary, rgba(255,255,255,0.6));
+  font-size: 13px;
 }
 
 .form-control input,
 .form-control textarea {
   width: 100%;
   font: inherit;
-  border: 2px solid #ccc;
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  background-color: rgba(248, 248, 248, 0.6);
-  padding: 0.6rem 1rem;
-  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  font-size: 15px;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.13));
+  border-radius: var(--radius-sm, 10px);
+  background: var(--glass-bg, rgba(255,255,255,0.07));
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  color: var(--text-primary, rgba(255,255,255,0.94));
+  padding: 10px 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
   resize: none;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control input:focus,
+.form-control textarea:focus {
+  border-color: var(--accent-blue, #0A84FF);
+  box-shadow: 0 0 0 3px rgba(10,132,255,0.18);
+}
+
+.form-control input::placeholder,
+.form-control textarea::placeholder {
+  color: var(--text-tertiary, rgba(255,255,255,0.35));
 }
 
 .form-control label,
 .form-control p {
-  color: #79aeca;
+  color: var(--text-secondary, rgba(255,255,255,0.6));
 }
 
 .form-control--invalid label,
 .form-control--invalid p {
-  color: #d32f2f;
+  color: var(--accent-red, #FF453A);
 }
 
 .form-control--invalid span {
