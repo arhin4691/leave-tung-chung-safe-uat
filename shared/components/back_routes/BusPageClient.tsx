@@ -273,7 +273,7 @@ const BusPageClient: React.FC<BusPageClientProps> = ({
           style={{
             // fontSize: "20px",
             fontWeight: 800,
-            color: "rgba(255,255,255,0.93)",
+            color: "var(--text-primary)",
             letterSpacing: "-0.01em",
           }}
         className="display-5 mb-2"
@@ -283,7 +283,7 @@ const BusPageClient: React.FC<BusPageClientProps> = ({
         <p
           style={{
             fontSize: "12px",
-            color: "rgba(255,255,255,0.38)",
+            color: "var(--text-secondary)",
             margin: "3px 0 0",
           }}
         >

@@ -207,7 +207,7 @@ const StopEtaRow: React.FC<StopEtaRowProps> = ({
           justifyContent: "center",
           fontSize: "11px",
           fontWeight: 700,
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--text-secondary)",
           flexShrink: 0,
         }}
       >
@@ -222,26 +222,26 @@ const StopEtaRow: React.FC<StopEtaRowProps> = ({
       >
         <div
           style={{
-            fontSize: "14px",
             fontWeight: 600,
-            color: "rgba(255,255,255,0.92)",
+            color: "var(--text-primary)",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
           }}
+          className="display-75"
         >
           {name_tc}
         </div>
         {name_en && name_en !== stopId && (
           <div
             style={{
-              fontSize: "11px",
-              color: "rgba(255,255,255,0.35)",
+              color: "var(--text-secondary)",
               marginTop: "1px",
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
             }}
+            className="display-8"
           >
             {name_en}
           </div>
@@ -262,7 +262,7 @@ const StopEtaRow: React.FC<StopEtaRowProps> = ({
         }}
       >
         {displayEtas.length === 0 ? (
-          <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>
+          <span className="display-8" style={{ color: "var(--text-secondary)" }}>
             無班次
           </span>
         ) : (
@@ -292,7 +292,7 @@ const StopEtaRow: React.FC<StopEtaRowProps> = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: isFav ? "#FF453A" : "rgba(255,255,255,0.25)",
+            color: isFav ? "#FF453A" : "var(--text-secondary)",
             fontSize: "16px",
             lineHeight: 1,
             transition: "color 0.15s",

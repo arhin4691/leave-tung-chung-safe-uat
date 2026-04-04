@@ -69,9 +69,7 @@ async function fetchSingleStopEtas(
   }
 
   if (company === "NLB") {
-    const res = await fetch(
-      `/api/nlb-eta?routeId=${routeId}&stops=${stopId}`,
-    );
+    const res = await fetch(`/api/nlb-eta?routeId=${routeId}&stops=${stopId}`);
     if (!res.ok) return [];
     const json = await res.json();
     const raw = (json.etas?.[stopId] ?? []) as Record<string, unknown>[];
@@ -92,7 +90,15 @@ async function fetchSingleStopEtas(
     const json = await res.json();
     // MTR Bus API returns status "0" for normal service (not "1")
     if (!json.busStop || !Array.isArray(json.busStop)) return [];
-    type MtrBusStop = { busStopId: string; bus: { arrivalTimeInSecond: string; arrivalTimeText: string; isScheduled: string; isDelayed: string }[] };
+    type MtrBusStop = {
+      busStopId: string;
+      bus: {
+        arrivalTimeInSecond: string;
+        arrivalTimeText: string;
+        isScheduled: string;
+        isDelayed: string;
+      }[];
+    };
     const stopData = (json.busStop as MtrBusStop[]).find(
       (s) => s.busStopId === stopId,
     );
@@ -101,7 +107,12 @@ async function fetchSingleStopEtas(
       .filter((b) => {
         const secs = parseInt(b.arrivalTimeInSecond, 10);
         const text = (b.arrivalTimeText ?? "").toLowerCase();
-        if (text.includes("arrived") || text.includes("到") || text.includes("正在")) return true;
+        if (
+          text.includes("arrived") ||
+          text.includes("到") ||
+          text.includes("正在")
+        )
+          return true;
         if (text.includes("departed") || text.includes("已離開")) return false;
         // Drop sentinel values ≥ 7200s (~2h) — origin/terminus placeholders e.g. 108000
         if (!Number.isNaN(secs) && secs >= 7200) return false;
@@ -130,7 +141,12 @@ async function fetchSingleStopEtas(
 function resolveMinutes(item: RouteEtaItem, now: number): number | null {
   if (item.etaText) {
     const lower = item.etaText.toLowerCase();
-    if (lower.includes("arriving") || lower.includes("到") || lower.includes("正在")) return 0;
+    if (
+      lower.includes("arriving") ||
+      lower.includes("到") ||
+      lower.includes("正在")
+    )
+      return 0;
     if (lower.includes("departed") || lower.includes("已離開")) return null;
   }
   if (item.etaSeconds != null) return Math.floor(item.etaSeconds / 60);
@@ -139,11 +155,11 @@ function resolveMinutes(item: RouteEtaItem, now: number): number | null {
   return isNaN(ms) ? null : Math.floor(ms / 60000);
 }
 
-const EtaPill: React.FC<{ item: RouteEtaItem; now: number; large?: boolean }> = ({
-  item,
-  now,
-  large = false,
-}) => {
+const EtaPill: React.FC<{
+  item: RouteEtaItem;
+  now: number;
+  large?: boolean;
+}> = ({ item, now, large = false }) => {
   const mins = resolveMinutes(item, now);
   if (mins === null) return null;
 
@@ -151,7 +167,13 @@ const EtaPill: React.FC<{ item: RouteEtaItem; now: number; large?: boolean }> = 
   const urgent = !arriving && mins <= 3;
   const warn = !urgent && mins <= 8;
 
-  const color = arriving ? "#34C759" : urgent ? "#FF453A" : warn ? "#FFD60A" : "#0A84FF";
+  const color = arriving
+    ? "#34C759"
+    : urgent
+      ? "#FF453A"
+      : warn
+        ? "#FFD60A"
+        : "#0A84FF";
   const bg = arriving
     ? "rgba(52,199,89,0.18)"
     : urgent
@@ -186,12 +208,14 @@ const EtaPill: React.FC<{ item: RouteEtaItem; now: number; large?: boolean }> = 
         >
           到達
         </motion.span>
-      ) : (item.etaText && !/^\d/.test(item.etaText)) ? (
+      ) : item.etaText && !/^\d/.test(item.etaText) ? (
         item.etaText
       ) : (
         <>
           {mins}
-          <span style={{ fontSize: large ? "11px" : "9px", fontWeight: 500 }}>分</span>
+          <span style={{ fontSize: large ? "11px" : "9px", fontWeight: 500 }}>
+            分
+          </span>
         </>
       )}
     </span>
@@ -246,11 +270,11 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, onRemove }) => {
   // For MTR Bus, look up real stop name from static table (overrides old "站 N (CODE)" format)
   const resolvedNameTc =
     stop.company === "MTRBUS"
-      ? (MTR_BUS_STOP_NAMES[stop.stopId]?.zh || stop.name_tc)
+      ? MTR_BUS_STOP_NAMES[stop.stopId]?.zh || stop.name_tc
       : stop.name_tc;
   const resolvedNameEn =
     stop.company === "MTRBUS"
-      ? (MTR_BUS_STOP_NAMES[stop.stopId]?.en || stop.name_en)
+      ? MTR_BUS_STOP_NAMES[stop.stopId]?.en || stop.name_en
       : stop.name_en;
 
   const validEtas = etas.filter((e) => resolveMinutes(e, now) !== null);
@@ -308,22 +332,22 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, onRemove }) => {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: "13px",
                 fontWeight: 700,
                 color: "var(--text-primary)",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
+              className="display-7"
             >
               {resolvedNameTc}
             </div>
             <div
               style={{
-                fontSize: "11px",
                 color: "var(--text-secondary)",
                 marginTop: "2px",
               }}
+              className="display-8"
             >
               <span
                 style={{
@@ -339,7 +363,7 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, onRemove }) => {
               >
                 {label}
               </span>
-              往 {stop.dest_tc}
+              <span className="display-8">往</span> {stop.dest_tc}
             </div>
           </div>
 
@@ -354,11 +378,15 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, onRemove }) => {
             }}
           >
             {loading ? (
-              <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>
+              <span
+                style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}
+              >
                 載入中…
               </span>
             ) : validEtas.length === 0 ? (
-              <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.28)" }}>
+              <span
+                style={{ fontSize: "11px", color: "rgba(255,255,255,0.28)" }}
+              >
                 無班次
               </span>
             ) : (

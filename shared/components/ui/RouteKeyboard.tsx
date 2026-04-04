@@ -40,7 +40,18 @@ import { buildTrie } from "@/shared/util/route-trie";
 
 // ── Keyboard layout constants ─────────────────────────────────────────────────
 // Digits shown in "numpad" order: 1–9 then 0
-const NUMPAD_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+const NUMPAD_DIGITS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "0",
+] as const;
 const LETTER_ROWS = [
   "ABCDEFG".split(""),
   "HIJKLMN".split(""),
@@ -80,20 +91,22 @@ interface KeyBtnProps {
   ariaLabel: string;
 }
 
-const KeyBtn = React.memo<KeyBtnProps>(({ label, valid, onPress, ariaLabel }) => (
-  <motion.button
-    type="button"
-    disabled={!valid}
-    aria-disabled={!valid}
-    className={`route-kb-key${valid ? " route-kb-key-valid" : " route-kb-key-dim"}`}
-    onClick={() => valid && onPress(label)}
-    whileTap={valid ? { scale: 0.72 } : {}}
-    transition={{ type: "spring", stiffness: 700, damping: 28 }}
-    aria-label={ariaLabel}
-  >
-    {label}
-  </motion.button>
-));
+const KeyBtn = React.memo<KeyBtnProps>(
+  ({ label, valid, onPress, ariaLabel }) => (
+    <motion.button
+      type="button"
+      disabled={!valid}
+      aria-disabled={!valid}
+      className={`route-kb-key${valid ? " route-kb-key-valid" : " route-kb-key-dim"}`}
+      onClick={() => valid && onPress(label)}
+      whileTap={valid ? { scale: 0.72 } : {}}
+      transition={{ type: "spring", stiffness: 700, damping: 28 }}
+      aria-label={ariaLabel}
+    >
+      {label}
+    </motion.button>
+  ),
+);
 KeyBtn.displayName = "KeyBtn";
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -108,10 +121,13 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
 }) => {
   const trie = useMemo(() => buildTrie(routes), [routes]);
 
-  const validNext  = useMemo(() => trie.nextChars(value),              [trie, value]);
-  const suggestions = useMemo(() => trie.matches(value, maxSuggestions), [trie, value, maxSuggestions]);
-  const isExact    = useMemo(() => trie.isExact(value),                 [trie, value]);
-  const noMatch    = value.length > 0 && suggestions.length === 0;
+  const validNext = useMemo(() => trie.nextChars(value), [trie, value]);
+  const suggestions = useMemo(
+    () => trie.matches(value, maxSuggestions),
+    [trie, value, maxSuggestions],
+  );
+  const isExact = useMemo(() => trie.isExact(value), [trie, value]);
+  const noMatch = value.length > 0 && suggestions.length === 0;
 
   const handleKey = useCallback(
     (ch: string) => {
@@ -124,8 +140,11 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
     [value, onChange, onSelect, trie],
   );
 
-  const handleBackspace = useCallback(() => onChange(value.slice(0, -1)), [value, onChange]);
-  const handleClear     = useCallback(() => onChange(""),                  [onChange]);
+  const handleBackspace = useCallback(
+    () => onChange(value.slice(0, -1)),
+    [value, onChange],
+  );
+  const handleClear = useCallback(() => onChange(""), [onChange]);
 
   return (
     <AnimatePresence>
@@ -156,43 +175,6 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
             {/* Drag handle */}
             <div className="route-kb-handle" aria-hidden="true" />
 
-            {/* ── Value display ────────────────────────────────── */}
-            <div className="route-kb-display" aria-live="polite" aria-atomic="true">
-              <div className="route-kb-display-inner">
-                {value ? (
-                  <span className="route-kb-display-value">{value.toUpperCase()}</span>
-                ) : (
-                  <span className="route-kb-display-placeholder">輸入路線號碼…</span>
-                )}
-                <AnimatePresence>
-                  {isExact && (
-                    <motion.span
-                      key="exact"
-                      className="route-kb-exact-badge"
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                    >
-                      ✓
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-                {noMatch && (
-                  <span className="route-kb-no-match" aria-live="assertive">找不到路線</span>
-                )}
-              </div>
-              <button
-                type="button"
-                className="route-kb-display-backspace"
-                onClick={handleBackspace}
-                disabled={!value}
-                aria-label="刪除上一個字元"
-              >
-                ⌫
-              </button>
-            </div>
-
             {/* ── Suggestion chips ─────────────────────────────── */}
             <AnimatePresence initial={false} mode="wait">
               {value.length > 0 && suggestions.length > 0 && (
@@ -215,7 +197,10 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
                         role="option"
                         aria-selected={sel}
                         className={`route-kb-chip${sel ? " route-kb-chip-exact" : ""}`}
-                        onClick={() => { onChange(r.toUpperCase()); onSelect?.(r); }}
+                        onClick={() => {
+                          onChange(r.toUpperCase());
+                          onSelect?.(r);
+                        }}
                       >
                         {r}
                       </button>
@@ -223,6 +208,56 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
                   })}
                 </motion.div>
               )}
+              {/* ── Value display ────────────────────────────────── */}
+              <div
+                className="route-kb-display"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <div className="route-kb-display-inner">
+                  {value ? (
+                    <span className="route-kb-display-value">
+                      {value.toUpperCase()}
+                    </span>
+                  ) : (
+                    <span className="route-kb-display-placeholder">
+                      輸入路線號碼…
+                    </span>
+                  )}
+                  <AnimatePresence>
+                    {isExact && (
+                      <motion.span
+                        key="exact"
+                        className="route-kb-exact-badge"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 22,
+                        }}
+                      >
+                        ✓
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                  {noMatch && (
+                    <span className="route-kb-no-match" aria-live="assertive">
+                      找不到路線
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="route-kb-display-backspace"
+                  onClick={handleBackspace}
+                  disabled={!value}
+                  aria-label="刪除上一個字元"
+                >
+                  ⌫
+                </button>
+              </div>
             </AnimatePresence>
 
             {/* ── Key panel ────────────────────────────────────── */}
@@ -230,7 +265,13 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
               {/* Numbers row — numpad order 1-9 then 0 */}
               <div className="route-kb-row route-kb-row-digits" role="row">
                 {NUMPAD_DIGITS.map((d) => (
-                  <KeyBtn key={d} label={d} valid={validNext.has(d)} onPress={handleKey} ariaLabel={`數字 ${d}`} />
+                  <KeyBtn
+                    key={d}
+                    label={d}
+                    valid={validNext.has(d)}
+                    onPress={handleKey}
+                    ariaLabel={`數字 ${d}`}
+                  />
                 ))}
               </div>
 
@@ -239,9 +280,19 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
 
               {/* Letter rows */}
               {LETTER_ROWS.map((row, ri) => (
-                <div key={ri} className="route-kb-row route-kb-row-letters" role="row">
+                <div
+                  key={ri}
+                  className="route-kb-row route-kb-row-letters"
+                  role="row"
+                >
                   {row.map((l) => (
-                    <KeyBtn key={l} label={l} valid={validNext.has(l)} onPress={handleKey} ariaLabel={`字母 ${l}`} />
+                    <KeyBtn
+                      key={l}
+                      label={l}
+                      valid={validNext.has(l)}
+                      onPress={handleKey}
+                      ariaLabel={`字母 ${l}`}
+                    />
                   ))}
                 </div>
               ))}

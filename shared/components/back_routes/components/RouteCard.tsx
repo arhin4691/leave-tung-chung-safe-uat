@@ -17,7 +17,12 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import StopEtaRow from "./StopEtaRow";
 import BusStopModal from "./BusStopModal";
-import type { BusRouteEntry, NormalisedStop, RouteEtaItem, SelectedStopInfo } from "@/shared/types";
+import type {
+  BusRouteEntry,
+  NormalisedStop,
+  RouteEtaItem,
+  SelectedStopInfo,
+} from "@/shared/types";
 import { toggleFavStop, isFavStop, getFavStops } from "@/shared/util/favStops";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
 
@@ -43,7 +48,9 @@ async function fetchStops(entry: BusRouteEntry): Promise<NormalisedStop[]> {
     );
     if (!res.ok) return [];
     const json = await res.json();
-    const stopIds: string[] = (json.stops ?? []).map((s: Record<string, unknown>) => s.stop as string);
+    const stopIds: string[] = (json.stops ?? []).map(
+      (s: Record<string, unknown>) => s.stop as string,
+    );
 
     const details = await Promise.all(
       stopIds.map((id, i) =>
@@ -70,32 +77,28 @@ async function fetchStops(entry: BusRouteEntry): Promise<NormalisedStop[]> {
     const res = await fetch(`/api/ctb-route?route=${entry.route}&mode=${mode}`);
     if (!res.ok) return [];
     const json = await res.json();
-    return (json.stops ?? []).map(
-      (s: Record<string, unknown>, i: number) => ({
-        id: s.stop as string,
-        name_tc: (s.name_tc as string) ?? "",
-        name_en: (s.name_en as string) ?? "",
-        lat: s.lat as string | undefined,
-        long: s.long as string | undefined,
-        seq: i + 1,
-      }),
-    );
+    return (json.stops ?? []).map((s: Record<string, unknown>, i: number) => ({
+      id: s.stop as string,
+      name_tc: (s.name_tc as string) ?? "",
+      name_en: (s.name_en as string) ?? "",
+      lat: s.lat as string | undefined,
+      long: s.long as string | undefined,
+      seq: i + 1,
+    }));
   }
 
   if (entry.company === "NLB") {
     const res = await fetch(`/api/nlb-route?routeId=${entry.routeId}`);
     if (!res.ok) return [];
     const json = await res.json();
-    return (json.stops ?? []).map(
-      (s: Record<string, unknown>, i: number) => ({
-        id: s.stopId as string,
-        name_tc: (s.stopName_c as string) ?? "",
-        name_en: (s.stopName_e as string) ?? "",
-        lat: s.stopLatitude as string | undefined,
-        long: s.stopLongitude as string | undefined,
-        seq: i + 1,
-      }),
-    );
+    return (json.stops ?? []).map((s: Record<string, unknown>, i: number) => ({
+      id: s.stopId as string,
+      name_tc: (s.stopName_c as string) ?? "",
+      name_en: (s.stopName_e as string) ?? "",
+      lat: s.stopLatitude as string | undefined,
+      long: s.stopLongitude as string | undefined,
+      seq: i + 1,
+    }));
   }
 
   return [];
@@ -168,7 +171,11 @@ async function fetchMtrBusSchedule(
   const json = await res.json();
   // MTR Bus API returns status "0" for normal service (not "1").
   // Determine working state from actual data instead of the status field.
-  if (!json.busStop || !Array.isArray(json.busStop) || json.busStop.length === 0) {
+  if (
+    !json.busStop ||
+    !Array.isArray(json.busStop) ||
+    json.busStop.length === 0
+  ) {
     return { stops: [], etas: {}, isWorking: false };
   }
 
@@ -211,7 +218,12 @@ async function fetchMtrBusSchedule(
         const secs = parseInt(b.arrivalTimeInSecond, 10);
         const text = (b.arrivalTimeText ?? "").toLowerCase();
         // Keep explicit arriving/about-to-arrive signals
-        if (text.includes("arriving") || text.includes("到") || text.includes("正在")) return true;
+        if (
+          text.includes("arriving") ||
+          text.includes("到") ||
+          text.includes("正在")
+        )
+          return true;
         // Drop already-departed buses
         if (text.includes("departed") || text.includes("已離開")) return false;
         // Drop sentinel values ≥ 7200s (2 h) — origin stop placeholders e.g. 108000
@@ -249,7 +261,9 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
   const [loadingEta, setLoadingEta] = useState(false);
   const [isWorking, setIsWorking] = useState<boolean | null>(null);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  const [selectedStop, setSelectedStop] = useState<SelectedStopInfo | null>(null);
+  const [selectedStop, setSelectedStop] = useState<SelectedStopInfo | null>(
+    null,
+  );
   // Track favourite state as a Set of "stopId|route|company" keys so it's reactive
   const [favKeys, setFavKeys] = useState<Set<string>>(() => {
     const list = getFavStops();
@@ -348,7 +362,11 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
     };
   }, [open, stops.length, pollEtas, entry.company]);
 
-  const pill = CO_PILL[entry.company] ?? { bg: "#555", label: entry.company, text: "#fff" };
+  const pill = CO_PILL[entry.company] ?? {
+    bg: "#555",
+    label: entry.company,
+    text: "#fff",
+  };
 
   return (
     <>
@@ -396,25 +414,25 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: "13px",
                 fontWeight: 700,
-                color: "rgba(255,255,255,0.9)",
+                color: "var(--text-primary)",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
+              className="display-7"
             >
-              往 {entry.dest_tc}
+              <span className="display-8">往</span> {entry.dest_tc}
             </div>
             <div
               style={{
-                fontSize: "11px",
-                color: "rgba(255,255,255,0.38)",
+                color: "var(--text-secondary)",
                 marginTop: "2px",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
+              className="display-8"
             >
               {entry.orig_tc} → {entry.dest_tc}
             </div>
@@ -448,7 +466,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
               <span
                 style={{
                   fontSize: "10px",
-                  fontWeight: 600,
+                  //   fontWeight: 600,
                   color: isWorking ? "#34C759" : "#FF453A",
                 }}
               >
@@ -462,7 +480,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
             animate={{ rotate: open ? 180 : 0 }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
             style={{
-              color: "rgba(255,255,255,0.35)",
+              color: "var(--text-secondary)",
               fontSize: "12px",
               flexShrink: 0,
             }}
@@ -495,7 +513,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
                   <span
                     style={{
                       fontSize: "11px",
-                      color: "rgba(255,255,255,0.4)",
+                      color: "var(--text-secondary)",
                       fontWeight: 600,
                       letterSpacing: "0.04em",
                     }}
@@ -505,7 +523,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
                   <span
                     style={{
                       fontSize: "11px",
-                      color: "rgba(255,255,255,0.4)",
+                      color: "var(--text-secondary)",
                       fontWeight: 600,
                     }}
                   >
@@ -526,7 +544,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
                     style={{
                       padding: "20px",
                       textAlign: "center",
-                      color: "rgba(255,255,255,0.35)",
+                      color: "var(--text-secondary)",
                       fontSize: "13px",
                     }}
                   >
@@ -554,7 +572,11 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
                       onSelectStop={setSelectedStop}
                       isFav={favKeys.has(favKey)}
                       onToggleFav={() => {
-                        const stillFav = !isFavStop(stop.id, entry.route, entry.company);
+                        const stillFav = !isFavStop(
+                          stop.id,
+                          entry.route,
+                          entry.company,
+                        );
                         toggleFavStop({
                           stopId: stop.id,
                           name_tc: stop.name_tc,
@@ -588,10 +610,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
       </motion.div>
 
       {/* ?? Stop detail modal ???????????????????????? */}
-      <BusStopModal
-        info={selectedStop}
-        onClose={() => setSelectedStop(null)}
-      />
+      <BusStopModal info={selectedStop} onClose={() => setSelectedStop(null)} />
     </>
   );
 };
@@ -606,7 +625,7 @@ const LoadingDots: React.FC = () => (
           width: "7px",
           height: "7px",
           borderRadius: "50%",
-          background: "rgba(255,255,255,0.35)",
+          background: "var(--text-secondary)",
           display: "inline-block",
         }}
         animate={{ y: [0, -6, 0] }}
