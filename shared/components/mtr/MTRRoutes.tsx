@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocale } from "@/shared/context/locale-context";
+import type { TranslationKey } from "@/shared/i18n/translations";
 import styles from "./MTRRoutes.module.css";
 
 // ── MTR line definitions ─────────────────────────────────────────
@@ -12,6 +13,11 @@ export interface MtrStation {
   name_en: string;
 }
 
+export interface MtrLineDirection {
+  label_zh: string;
+  label_en: string;
+}
+
 export interface MtrLine {
   code: string;
   name_zh: string;
@@ -19,6 +25,10 @@ export interface MtrLine {
   color: string;
   textColor: string;
   stations: MtrStation[];
+  /** API "DOWN" direction terminus label (toward urban/first listed terminus) */
+  directionDown: MtrLineDirection;
+  /** API "UP" direction terminus label (toward outlying/last listed terminus) */
+  directionUp: MtrLineDirection;
 }
 
 export const MTR_LINES: MtrLine[] = [
@@ -28,6 +38,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "Tung Chung Line",
     color: "#F7943E",
     textColor: "#fff",
+    directionDown: { label_zh: "往香港", label_en: "Towards HK" },
+    directionUp: { label_zh: "往東涌", label_en: "Towards TC" },
     stations: [
       { code: "HOK", name_zh: "香港", name_en: "Hong Kong" },
       { code: "KOW", name_zh: "九龍", name_en: "Kowloon" },
@@ -45,6 +57,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "Airport Express",
     color: "#00888A",
     textColor: "#fff",
+    directionDown: { label_zh: "往香港", label_en: "Towards HK" },
+    directionUp: { label_zh: "往博覽館", label_en: "Towards AsiaWorld-Expo" },
     stations: [
       { code: "HOK", name_zh: "香港", name_en: "Hong Kong" },
       { code: "KOW", name_zh: "九龍", name_en: "Kowloon" },
@@ -59,6 +73,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "Tuen Ma Line",
     color: "#9C2E00",
     textColor: "#fff",
+    directionDown: { label_zh: "往八鄉", label_en: "Towards Pat Heung" },
+    directionUp: { label_zh: "往烏溪沙", label_en: "Towards Wu Kai Sha" },
     stations: [
       { code: "WKS", name_zh: "烏溪沙", name_en: "Wu Kai Sha" },
       { code: "MOS", name_zh: "馬鞍山", name_en: "Ma On Shan" },
@@ -94,6 +110,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "Tsuen Wan Line",
     color: "#E2231A",
     textColor: "#fff",
+    directionDown: { label_zh: "往中環", label_en: "Towards Central" },
+    directionUp: { label_zh: "往荃灣", label_en: "Towards Tsuen Wan" },
     stations: [
       { code: "CEN", name_zh: "中環", name_en: "Central" },
       { code: "ADM", name_zh: "金鐘", name_en: "Admiralty" },
@@ -118,6 +136,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "Kwun Tong Line",
     color: "#00A040",
     textColor: "#fff",
+    directionDown: { label_zh: "往黃埔", label_en: "Towards Whampoa" },
+    directionUp: { label_zh: "往調景嶺", label_en: "Towards Tiu Keng Leng" },
     stations: [
       { code: "WHA", name_zh: "黃埔", name_en: "Whampoa" },
       { code: "HOM", name_zh: "何文田", name_en: "Ho Man Tin" },
@@ -143,6 +163,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "Island Line",
     color: "#007DC5",
     textColor: "#fff",
+    directionDown: { label_zh: "往堅尼地城", label_en: "Towards Kennedy Town" },
+    directionUp: { label_zh: "往柴灣", label_en: "Towards Chai Wan" },
     stations: [
       { code: "KET", name_zh: "堅尼地城", name_en: "Kennedy Town" },
       { code: "HKU", name_zh: "香港大學", name_en: "HKU" },
@@ -169,6 +191,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "Tseung Kwan O Line",
     color: "#7D499D",
     textColor: "#fff",
+    directionDown: { label_zh: "往北角", label_en: "Towards North Point" },
+    directionUp: { label_zh: "往寶琳/康城", label_en: "Towards Po Lam/LOHAS Park" },
     stations: [
       { code: "NOP", name_zh: "北角", name_en: "North Point" },
       { code: "QUB", name_zh: "鰂魚涌", name_en: "Quarry Bay" },
@@ -186,6 +210,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "East Rail Line",
     color: "#53B7E8",
     textColor: "#fff",
+    directionDown: { label_zh: "往金鐘", label_en: "Towards Admiralty" },
+    directionUp: { label_zh: "往羅湖/落馬洲", label_en: "Towards Lo Wu/Lok Ma Chau" },
     stations: [
       { code: "ADM", name_zh: "金鐘", name_en: "Admiralty" },
       { code: "EXC", name_zh: "會展", name_en: "Exhibition Centre" },
@@ -210,6 +236,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "South Island Line",
     color: "#BAD53F",
     textColor: "#333",
+    directionDown: { label_zh: "往金鐘", label_en: "Towards Admiralty" },
+    directionUp: { label_zh: "往海怡半島", label_en: "Towards South Horizons" },
     stations: [
       { code: "ADM", name_zh: "金鐘", name_en: "Admiralty" },
       { code: "OCP", name_zh: "海洋公園", name_en: "Ocean Park" },
@@ -224,6 +252,8 @@ export const MTR_LINES: MtrLine[] = [
     name_en: "Disneyland Resort Line",
     color: "#F589B2",
     textColor: "#fff",
+    directionDown: { label_zh: "往欣澳", label_en: "Towards Sunny Bay" },
+    directionUp: { label_zh: "往迪士尼", label_en: "Towards Disneyland" },
     stations: [
       { code: "SUN", name_zh: "欣澳", name_en: "Sunny Bay" },
       { code: "DIS", name_zh: "迪士尼", name_en: "Disneyland Resort" },
@@ -301,8 +331,8 @@ const LineCard: React.FC<{
 const EtaRow: React.FC<{
   eta: TrainEta;
   size?: "lg" | "sm";
-  locale: string;
-}> = ({ eta, size = "sm", locale }) => {
+  t: (key: TranslationKey) => string;
+}> = ({ eta, size = "sm", t }) => {
   const mins = eta.ttnt;
   const isNow = mins === 0;
   const isSoon = mins > 0 && mins <= 3;
@@ -312,15 +342,10 @@ const EtaRow: React.FC<{
       <span
         className={`${styles.etaMins} ${isNow ? styles.etaNow : isSoon ? styles.etaSoon : ""}`}
       >
-        {isNow
-          ? locale === "zh-HK"
-            ? "即將到站"
-            : "Arriving"
-          : `${mins}${locale === "zh-HK" ? "分" : " min"}`}
+        {isNow ? t("mtr.arriving") : `${mins}${t("mtr.minSuffix")}`}
       </span>
       <span className={styles.etaPlat}>
-        {locale === "zh-HK" ? "月台 " : "Plat "}
-        {eta.plat}
+        {t("mtr.platShort")} {eta.plat}
       </span>
     </div>
   );
@@ -333,9 +358,12 @@ const StationEtaCard: React.FC<{
   lineCode: string;
   lineColor: string;
   locale: string;
+  t: (key: TranslationKey) => string;
+  directionDown: MtrLineDirection;
+  directionUp: MtrLineDirection;
   selected: boolean;
   onSelect: () => void;
-}> = ({ station, data, lineCode, lineColor, locale, selected, onSelect }) => {
+}> = ({ station, data, lineCode, lineColor, locale, t, directionDown, directionUp, selected, onSelect }) => {
   const stationKey = `${lineCode}-${station.code}`;
   const stationData = data?.[stationKey as keyof typeof data] as any;
   const down: TrainEta[] = stationData?.DOWN ?? [];
@@ -388,20 +416,20 @@ const StationEtaCard: React.FC<{
           >
             {!hasData ? (
               <p className={styles.noService}>
-                {locale === "zh-HK" ? "暫停服務" : "No service"}
+                {t("mtr.noService")}
               </p>
             ) : (
               <div className={styles.etaColumns}>
                 {down.length > 0 && (
                   <div className={styles.etaCol}>
                     <span className={styles.dirLabel}>
-                      {locale === "zh-HK" ? "往香港方向" : "Towards HK"}
+                      {locale === "zh-HK" ? directionDown.label_zh : directionDown.label_en}
                     </span>
                     {down.slice(0, 3).map((e, i) => (
                       <EtaRow
                         key={i}
                         eta={e}
-                        locale={locale}
+                        t={t}
                         size={i === 0 ? "lg" : "sm"}
                       />
                     ))}
@@ -410,13 +438,13 @@ const StationEtaCard: React.FC<{
                 {up.length > 0 && (
                   <div className={styles.etaCol}>
                     <span className={styles.dirLabel}>
-                      {locale === "zh-HK" ? "往東涌方向" : "Towards TC"}
+                      {locale === "zh-HK" ? directionUp.label_zh : directionUp.label_en}
                     </span>
                     {up.slice(0, 3).map((e, i) => (
                       <EtaRow
                         key={i}
                         eta={e}
-                        locale={locale}
+                        t={t}
                         size={i === 0 ? "lg" : "sm"}
                       />
                     ))}
@@ -433,7 +461,7 @@ const StationEtaCard: React.FC<{
 
 // ── Main component ────────────────────────────────────────────────
 const MTRRoutes: React.FC = () => {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const [selectedLine, setSelectedLine] = useState<MtrLine | null>(
     MTR_LINES[0],
   );
@@ -494,13 +522,12 @@ const MTRRoutes: React.FC = () => {
       <div
         className="display-5 mb-2"
         style={{
-          // fontSize: "20px",
           fontWeight: 800,
           color: "rgba(255,255,255,0.93)",
           letterSpacing: "-0.01em",
         }}
       >
-        {locale === "zh-HK" ? "地鐵路線" : "MTR Lines"}
+        {t("mtr.title")}
       </div>
 
       {/* Line selector */}
@@ -555,6 +582,9 @@ const MTRRoutes: React.FC = () => {
                     lineCode={selectedLine.code}
                     lineColor={selectedLine.color}
                     locale={locale}
+                    t={t}
+                    directionDown={selectedLine.directionDown}
+                    directionUp={selectedLine.directionUp}
                     selected={selectedStation === station.code}
                     onSelect={() => handleStationSelect(station.code)}
                   />
@@ -563,9 +593,7 @@ const MTRRoutes: React.FC = () => {
             </div>
 
             <p className={styles.serviceHours}>
-              {locale === "zh-HK"
-                ? "服務時間 06:02 – 00:43"
-                : "Service hours 06:02 – 00:43"}
+              {t("mtr.operatingHours")}
             </p>
           </motion.div>
         )}

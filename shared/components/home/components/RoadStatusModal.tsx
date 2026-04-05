@@ -4,6 +4,7 @@ import Modal from "../../ui/Modal";
 import React from "react";
 import Button from "../../ui/Button";
 import { Grid } from "@mui/material";
+import { useLocale } from "@/shared/context/locale-context";
 import type { RoadStatusMessage } from "@/shared/types";
 
 interface RoadStatusModalProps {
@@ -13,8 +14,9 @@ interface RoadStatusModalProps {
 }
 
 const RoadStatusModal: React.FC<RoadStatusModalProps> = (props) => {
-  const header = <div className="ms-2">交通消息 - {props.data.msgID?.[0]}</div>;
-  const footer = <Button onClick={props.onClose}>收到明白</Button>;
+  const { t } = useLocale();
+  const header = <div className="ms-2">{t("roadStatus.title")} - {props.data.msgID?.[0]}</div>;
+  const footer = <Button onClick={props.onClose}>{t("roadStatus.confirm")}</Button>;
   const all: string[] = props.data.ChinText?.[0]?.split("。") ?? [];
 
   const content = (

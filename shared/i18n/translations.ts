@@ -43,6 +43,7 @@ export const translations = {
     "bus.notFound": "根據你的輸入找不到任何路線",
     "bus.preparing": "正在為你準備列表",
     "bus.startStop": "起點: ",
+    "bus.search": "搜尋",
     // MTR
     "mtr.title": "地鐵路線",
     "mtr.selectLine": "選擇路線",
@@ -65,16 +66,28 @@ export const translations = {
     "mtr.line.SIL": "南港島線",
     "mtr.line.TKL": "將軍澳線",
     "mtr.line.DRL": "迪士尼綫",
+    "mtr.minSuffix": "分",
+    "mtr.platShort": "月台",
     // Car Park
     "carpark.title": "東涌停車場",
     // Theme / Locale
     "theme.dark": "🌙",
     "theme.light": "☀️",
     "locale.switch": "EN",
+    // Settings
+    "settings.title": "設定",
+    "settings.lightMode": "淺色模式",
+    "settings.darkMode": "深色模式",
+    "settings.about": "關於",
     // About
     "about.version": "版本號碼",
     "about.releaseDate": "發佈日期",
     "about.feedbackHere": "這裡",
+    "about.devNotePrefix": "開發者搬進東涌，發現交通何其疏落。有見及此，設計本應用程式。希望從東涌出發的居民及想要進入東涌的市民能使用本應用程式令行程更有預算﹑更方便。歡迎電郵至",
+    "about.devNoteSuffix": "提供意見。",
+    // Road Status
+    "roadStatus.title": "交通消息",
+    "roadStatus.confirm": "收到明白",
     "fav.youHaveNoFav": "你還沒有任何常用路線",
     // Updates
     "update.2026-04-04": "新增 MTR Bus 路線時刻表",
@@ -128,6 +141,7 @@ export const translations = {
     "bus.notFound": "No routes found for your input",
     "bus.preparing": "Preparing route list",
     "bus.startStop": "From: ",
+    "bus.search": "Search",
     // MTR
     "mtr.title": "MTR Lines",
     "mtr.selectLine": "Select Line",
@@ -150,16 +164,28 @@ export const translations = {
     "mtr.line.SIL": "South Island Line",
     "mtr.line.TKL": "Tseung Kwan O Line",
     "mtr.line.DRL": "Disneyland Resort Line",
+    "mtr.minSuffix": " min",
+    "mtr.platShort": "Plat",
     // Car Park
     "carpark.title": "Tung Chung Car Parks",
     // Theme / Locale
     "theme.dark": "🌙",
     "theme.light": "☀️",
     "locale.switch": "中文",
+    // Settings
+    "settings.title": "Settings",
+    "settings.lightMode": "Light Mode",
+    "settings.darkMode": "Dark Mode",
+    "settings.about": "About",
     // About
     "about.version": "Version",
     "about.releaseDate": "Release Date",
     "about.feedbackHere": "here",
+    "about.devNotePrefix": "The developer moved to Tung Chung and found transportation very sparse. This app was built to help residents and visitors plan their journeys more easily. Feel free to email",
+    "about.devNoteSuffix": " to leave feedback.",
+    // Road Status
+    "roadStatus.title": "Traffic News",
+    "roadStatus.confirm": "Got It",
     "fav.youHaveNoFav": "You don't have any favourite routes yet",
     // Updates
     "update.2026-04-04": "Added MTR Bus route schedules",

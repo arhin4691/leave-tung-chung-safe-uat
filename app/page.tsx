@@ -1,7 +1,6 @@
 "use client";
 
 import BusFavList from "@/shared/components/bus_routes/components/BusFavList";
-import AboutModal from "@/shared/components/home/components/AboutModal";
 import { UpdateContext } from "@/shared/context/update-context";
 import { Grid } from "@mui/material";
 import { useState, useEffect, useCallback } from "react";
@@ -39,7 +38,6 @@ export default function Home() {
   const [likedBack, setLikedBack] = useState("");
   const [likedNlb, setLikedNlb] = useState("");
   const [likedRouteStop, setLikedRouteStop] = useState<FavRouteStop[]>([]);
-  const [showAbout, setShowAbout] = useState(false);
   // mounted guard: keep SSR and client initial render identical so React
   // hydration never sees a mismatch from localStorage-populated state.
   const [mounted, setMounted] = useState(false);
@@ -81,13 +79,6 @@ export default function Home() {
           ),
       }}
     >
-      <AboutModal
-        releaseDate={UPDATES[0].date}
-        version={UPDATES[0].version}
-        onClose={() => setShowAbout(false)}
-        show={showAbout}
-      />
-
       <motion.div
         variants={containerVariants}
         initial="hidden"

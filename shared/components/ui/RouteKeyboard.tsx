@@ -37,6 +37,7 @@
 import React, { useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { buildTrie } from "@/shared/util/route-trie";
+import { useLocale } from "@/shared/context/locale-context";
 
 // ── Keyboard layout constants ─────────────────────────────────────────────────
 // Digits shown in "numpad" order: 1–9 then 0
@@ -119,6 +120,7 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
   routes,
   maxSuggestions = 12,
 }) => {
+  const { t } = useLocale();
   const trie = useMemo(() => buildTrie(routes), [routes]);
 
   const validNext = useMemo(() => trie.nextChars(value), [trie, value]);
@@ -144,7 +146,7 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
     () => onChange(value.slice(0, -1)),
     [value, onChange],
   );
-  const handleClear = useCallback(() => onChange(""), [onChange]);
+  const handleSearch = useCallback(() => onClose(), [onClose]);
 
   return (
     <AnimatePresence>
@@ -301,7 +303,7 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
               <div className="route-kb-row route-kb-row-actions" role="row">
                 <button
                   type="button"
-                  className="route-kb-action route-kb-action-backspace"
+                  className="route-kb-action route-kb-action-clear"
                   onClick={handleBackspace}
                   disabled={!value}
                   aria-label="刪除上一個字元"
@@ -310,12 +312,12 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
                 </button>
                 <button
                   type="button"
-                  className="route-kb-action route-kb-action-clear"
-                  onClick={handleClear}
+                  className="route-kb-action route-kb-action-search"
+                  onClick={handleSearch}
                   disabled={!value}
-                  aria-label="清除全部輸入"
+                  aria-label={t("bus.search")}
                 >
-                  清除全部
+                  {t("bus.search")}
                 </button>
               </div>
             </div>

@@ -1,80 +1,130 @@
 "use client";
 
-import { Grid } from "@mui/material";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import React from "react";
-import Button from "../../ui/Button";
-import Input from "../../ui/Input";
-import Modal from "../../ui/Modal";
-import Card from "../../ui/Card";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface AboutModalProps {
-  show: boolean;
-  onClose: () => void;
   version: string;
   releaseDate: string;
 }
 
-const AboutModal: React.FC<AboutModalProps> = (props) => {
-  const logoFile = "/files/images/logo.png";
-  const footer = <Button light onClick={props.onClose}>關閉</Button>;
-  const content = (
-    <Grid container spacing={0}>
-      <Grid item xs={12}>
-        <div className="center mb-5">
-          <Image src={logoFile} alt="Logo" width={150} height={100} />
-        </div>
-      </Grid>
-      <Grid item xs={12}>
-        <Card disabled classNames="p-2">
-          <div className="badge-primary center p-1">開發者的話</div>
-          <span className="text-primary">
-            開發者搬進東涌，發現交通何其疏落。有見及此，設計本應用程式。希望從東涌出發的居民及想要進入東涌的市民能使用本應用程式令行程更有預算﹑更方便。歡迎電郵至
-            <a
-              href={`mailto:leave.tung.chung.safe@gmail.com?subject=我想向東涌出行提供意見&body=版本號碼: ${props.version}%20%3A%0D%0A意見內容: `}
-              className="text-success badge-success-outline"
-            >
-              這裡
-            </a>
-          </span>
-          提供意見。
-        </Card>
-      </Grid>
-      <Grid item xs={12}>
-        <Input
-          id="version"
-          type="text"
-          label="版本號碼"
-          element="input"
-          placeholder={props.version}
-          onInput={() => {}}
-          validators={[]}
-          onGetValue={() => {}}
-          autocomplete="off"
-          disabled
-        />
-      </Grid>
-      <Grid item xs={12}>
-        <Input
-          id="releaseDate"
-          type="text"
-          label="發佈日期"
-          element="input"
-          placeholder={props.releaseDate}
-          onInput={() => {}}
-          validators={[]}
-          onGetValue={() => {}}
-          autocomplete="off"
-          disabled
-        />
-      </Grid>
-    </Grid>
-  );
+const AboutModal: React.FC<AboutModalProps> = ({ version, releaseDate }) => {
+  const { t } = useLocale();
+  const [open, setOpen] = useState(false);
 
   return (
-    <Modal show={props.show} size="sm" footer={footer} onCancel={props.onClose}>
-      {content}
-    </Modal>
+    <div style={{ width: "100%" }}>
+      {/* Header row — matches settingsPopover row style */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          padding: "10px 14px",
+          borderRadius: "12px",
+          cursor: "pointer",
+          border: "none",
+          outline: "none",
+          background: "rgba(255,255,255,0.07)",
+          color: "rgba(255,255,255,0.86)",
+          fontSize: "13px",
+          fontWeight: 500,
+          fontFamily: "inherit",
+          width: "100%",
+          textAlign: "left",
+        }}
+      >
+        <span>{t("settings.about")}</span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 28 }}
+          style={{ color: "rgba(255,255,255,0.52)", fontSize: "14px", lineHeight: 1 }}
+        >
+          ▾
+        </motion.span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 30 }}
+            style={{ overflow: "hidden" }}
+          >
+            {/* FavStopCard-style glass card */}
+            <div
+              style={{
+                marginTop: "6px",
+                borderRadius: "14px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.09)",
+                padding: "14px",
+              }}
+            >
+              {/* Logo */}
+              <div style={{ textAlign: "center", marginBottom: "12px" }}>
+                <Image src="/files/images/logo.png" alt="Logo" width={80} height={53} />
+              </div>
+
+              {/* Dev note */}
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "rgba(255,255,255,0.72)",
+                  lineHeight: 1.6,
+                  marginBottom: "12px",
+                }}
+              >
+                {t("about.devNotePrefix")}
+                <a
+                  href={`mailto:leave.tung.chung.safe@gmail.com?subject=我想向東涌出行提供意見&body=版本號碼: ${version}%20%3A%0D%0A意見內容: `}
+                  style={{ color: "#34C759", marginInline: "3px", textDecoration: "none" }}
+                >
+                  {t("about.feedbackHere")}
+                </a>
+                {t("about.devNoteSuffix")}
+              </div>
+
+              {/* Version + release date badges */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <span
+                  style={{
+                    background: "rgba(10,132,255,0.15)",
+                    border: "1px solid rgba(10,132,255,0.35)",
+                    color: "#0A84FF",
+                    borderRadius: "9999px",
+                    padding: "2px 10px",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {t("about.version")}: {version}
+                </span>
+                <span
+                  style={{
+                    background: "rgba(255,255,255,0.07)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "rgba(255,255,255,0.55)",
+                    borderRadius: "9999px",
+                    padding: "2px 10px",
+                    fontSize: "11px",
+                    fontWeight: 500,
+                  }}
+                >
+                  {releaseDate}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

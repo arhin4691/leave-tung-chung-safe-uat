@@ -8,6 +8,7 @@ import classes from "./NavButton.module.css";
 import { useTheme } from "@/shared/context/theme-context";
 import { useLocale } from "@/shared/context/locale-context";
 import { Grid } from "@mui/material";
+import AboutModal from "@/shared/components/home/components/AboutModal";
 
 // ── SVG Icons ────────────────────────────────────────────────────
 const HomeIcon = () => (
@@ -169,7 +170,7 @@ const NavButton: React.FC = () => {
                 /* Desktop: popover floats to the right of the 220px sidebar */
                 ? { position: "fixed", bottom: 80, left: 232, zIndex: 150 }
                 /* Mobile: popover floats above centre of bottom dock */
-                : { position: "fixed", bottom: 90, left: "50%", zIndex: 150 }
+                : { position: "fixed", bottom: 90, left: "50%", zIndex: 150, width: "80%" }
             }
           >
             <motion.div
@@ -187,13 +188,7 @@ const NavButton: React.FC = () => {
                 }}
               >
                 <span>
-                  {theme === "dark"
-                    ? isZh
-                      ? "淺色模式"
-                      : "Light Mode"
-                    : isZh
-                      ? "深色模式"
-                      : "Dark Mode"}
+                  {theme === "dark" ? t("settings.lightMode") : t("settings.darkMode")}
                 </span>
                 <span className={classes.popoverAccessory}>
                   {theme === "dark" ? <SunIcon /> : <MoonIcon />}
@@ -218,6 +213,7 @@ const NavButton: React.FC = () => {
                   {isZh ? "EN" : "中"}
                 </span>
               </button>
+              <AboutModal version="1.01" releaseDate="2026-04-04" />
             </motion.div>
           </div>
         )}
@@ -329,14 +325,14 @@ const NavButton: React.FC = () => {
                 ref={settingsBtnRef}
                 className={`${classes.item} ${classes.settingsNavItem} ${settingsOpen ? classes.itemActive : ""}`}
                 onClick={() => setSettingsOpen((o) => !o)}
-                aria-label={isZh ? "設定" : "Settings"}
+                aria-label={t("settings.title")}
                 aria-expanded={settingsOpen}
               >
                 <span className={classes.itemIcon}>
                   <GearIcon />
                 </span>
                 <span className={classes.itemLabel}>
-                  {isZh ? "設定" : "Settings"}
+                  {t("settings.title")}
                 </span>
               </button>
             </motion.div>
