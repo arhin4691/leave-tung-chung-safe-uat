@@ -88,7 +88,10 @@ const RoadStatus: React.FC<RoadStatusProps> = ({ onToggle, isOpen }) => {
         }}
       >
         {/* Left: dot + title + count badge */}
-        <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+        <div
+          style={{ display: "flex", alignItems: "center", gap: "7px" }}
+          onClick={onToggle}
+        >
           <span
             style={{
               width: 7,

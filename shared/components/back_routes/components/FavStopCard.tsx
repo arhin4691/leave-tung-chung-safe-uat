@@ -381,13 +381,13 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onR
           >
             {loading ? (
               <span
-                style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}
+                style={{ fontSize: "11px", color: "var(--text-secondary)" }}
               >
                 載入中…
               </span>
             ) : validEtas.length === 0 ? (
               <span
-                style={{ fontSize: "11px", color: "rgba(255,255,255,0.28)" }}
+                style={{ fontSize: "11px", color: "var(--text-secondary)" }}
               >
                 無班次
               </span>

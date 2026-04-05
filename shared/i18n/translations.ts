@@ -83,7 +83,8 @@ export const translations = {
     "about.version": "版本號碼",
     "about.releaseDate": "發佈日期",
     "about.feedbackHere": "這裡",
-    "about.devNotePrefix": "開發者搬進東涌，發現交通何其疏落。有見及此，設計本應用程式。希望從東涌出發的居民及想要進入東涌的市民能使用本應用程式令行程更有預算﹑更方便。歡迎電郵至",
+    "about.devNotePrefix":
+      "開發者搬進東涌，發現交通何其疏落。有見及此，設計本應用程式。希望從東涌出發的居民及想要進入東涌的市民能使用本應用程式令行程更有預算﹑更方便。歡迎電郵至",
     "about.devNoteSuffix": "提供意見。",
     // Road Status
     "roadStatus.title": "交通消息",
@@ -97,6 +98,11 @@ export const translations = {
     "update.2023-12-20": "新增地鐵站停車場資訊",
     "update.2023-11-30": "新增巴士站搜尋和常用功能",
     "update.2026-04-05": "增強介面和修復一些小問題",
+    "update.2026-04-06": "新增距離偵測和最近站排序功能",
+    // Basic
+    "setting.edit": "編輯",
+    "common.sortNearest": "最近站優先",
+    "common.sortByNumber": "按路線號排序",
   },
   en: {
     // Navigation
@@ -120,6 +126,8 @@ export const translations = {
     "common.noService": "No service",
     "common.inService": "In service",
     "common.notOpen": "Not started",
+    "common.sortNearest": "Nearest first",
+    "common.sortByNumber": "Sort by number",
     // Home
     "home.updateLog": "Changelog",
     "home.favourite": "Favourites ❤️",
@@ -182,22 +190,25 @@ export const translations = {
     "about.version": "Version",
     "about.releaseDate": "Release Date",
     "about.feedbackHere": "here",
-    "about.devNotePrefix": "The developer moved to Tung Chung and found transportation very sparse. This app was built to help residents and visitors plan their journeys more easily. Feel free to email",
+    "about.devNotePrefix":
+      "The developer moved to Tung Chung and found transportation very sparse. This app was built to help residents and visitors plan their journeys more easily. Feel free to email",
     "about.devNoteSuffix": " to leave feedback.",
     // Road Status
     "roadStatus.title": "Traffic News",
     "roadStatus.confirm": "Got It",
     "fav.youHaveNoFav": "You don't have any favourite routes yet",
     // Updates
+    "update.2026-04-06": "Added distance detection and nearest stop sorting",
     "update.2026-04-04": "Added MTR Bus route schedules",
     "update.2026-04-04-2": "Added MTR Bus real-time ETA (beta)",
     "update.2024-02-26": "Added Ma Wan Park Island bus routes and ETAs",
     "update.2024-01-15": "Added NLB bus routes and ETAs",
     "update.2023-12-20": "Added MTR station car park information",
     "update.2023-11-30": "Added bus stop search and favourites",
-
+    // Basic
+    "setting.edit": "Edit",
   },
 } as const;
 
-export type TranslationKey = keyof typeof translations["zh-HK"];
+export type TranslationKey = keyof (typeof translations)["zh-HK"];
 export type Locale = keyof typeof translations;

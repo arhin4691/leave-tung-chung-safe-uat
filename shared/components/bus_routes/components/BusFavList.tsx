@@ -1,7 +1,7 @@
 "use client";
 
 import { Grid } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Card from "../../ui/Card";
 import BackRoutesItemsCTBStop from "../../back_routes/components/BackRoutesItemsCTBStop";
@@ -21,6 +21,23 @@ const LogoYellow = "/files/images/logo_yellow.png";
 const LogoLWB = "/files/images/logo_lwb.png";
 const LogoCTB = "/files/images/logo_ctb.png";
 const LogoNLB = "/files/images/logo_nlb.png";
+
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 interface BusFavListProps {
   data: BusRoute[];
@@ -44,6 +61,8 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
     props.routeStopData ?? [],
   );
   const [editMode, setEditMode] = useState(false);
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
 
   useEffect(() => {
     setData(props.data);
@@ -52,7 +71,66 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
     setRouteStopData(props.routeStopData ?? []);
   }, [props.data, props.backData, props.nlbData, props.routeStopData]);
 
-  const likedNLB = nlbData.map((x, index) => (
+  useEffect(() => {
+    if (!navigator?.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLat(pos.coords.latitude);
+        setUserLng(pos.coords.longitude);
+      },
+      () => { /* permission denied – fall back to number sort */ },
+      { timeout: 8000, maximumAge: 60_000 },
+    );
+  }, []);
+
+  const backDataArray = Array.isArray(backData) ? backData : [];
+
+  const sortedNlbData = useMemo(
+    () => [...nlbData].sort((a, b) => a.route.localeCompare(b.route)),
+    [nlbData],
+  );
+
+  const sortedBackData = useMemo(() => {
+    const list = [...backDataArray];
+    if (userLat !== null && userLng !== null) {
+      return list.sort((a, b) => {
+        const aLat = parseFloat(a.lat ?? "");
+        const aLng = parseFloat(a.long ?? "");
+        const bLat = parseFloat(b.lat ?? "");
+        const bLng = parseFloat(b.long ?? "");
+        if (!isNaN(aLat) && !isNaN(aLng) && !isNaN(bLat) && !isNaN(bLng)) {
+          return (
+            haversineKm(userLat, userLng, aLat, aLng) -
+            haversineKm(userLat, userLng, bLat, bLng)
+          );
+        }
+        return a.route < b.route ? -1 : 1;
+      });
+    }
+    return list.sort((a, b) => (a.route < b.route ? -1 : 1));
+  }, [backDataArray, userLat, userLng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sortedRouteStopData = useMemo(() => {
+    const list = [...routeStopData];
+    if (userLat !== null && userLng !== null) {
+      return list.sort((a, b) => {
+        const aLat = parseFloat(a.lat ?? "");
+        const aLng = parseFloat(a.long ?? "");
+        const bLat = parseFloat(b.lat ?? "");
+        const bLng = parseFloat(b.long ?? "");
+        if (!isNaN(aLat) && !isNaN(aLng) && !isNaN(bLat) && !isNaN(bLng)) {
+          return (
+            haversineKm(userLat, userLng, aLat, aLng) -
+            haversineKm(userLat, userLng, bLat, bLng)
+          );
+        }
+        return a.route.localeCompare(b.route);
+      });
+    }
+    return list.sort((a, b) => a.route.localeCompare(b.route));
+  }, [routeStopData, userLat, userLng]);
+
+  const likedNLB = sortedNlbData.map((x, index) => (
     <React.Fragment key={index}>
       <Card classNames="p-2">
         <Grid container spacing={0}>
@@ -82,8 +160,6 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
       </Card>
     </React.Fragment>
   ));
-
-  const backDataArray = Array.isArray(backData) ? backData : [];
 
   return (
     <>
@@ -118,6 +194,16 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
               }}
             >
               {t("home.favourite")}
+            </span>
+            <span
+              style={{
+                fontSize: "10px",
+                color: userLat !== null ? "#34C759" : "var(--text-secondary)",
+                opacity: 0.75,
+                marginLeft: "6px",
+              }}
+            >
+              {userLat !== null ? t("common.sortNearest") : t("common.sortByNumber")}
             </span>
           </div>
           <button
@@ -156,7 +242,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                   <path d="m18.5 2.5 3 3L12 15l-4 1 1-4Z" />
                 </svg>
-                Edit
+                {t("setting.edit")}
               </>
             )}
           </button>
@@ -180,8 +266,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
               xl={props.mode !== "home" ? 3 : undefined}
             >
               {backDataArray.length > 0 &&
-                backDataArray
-                  .sort((a, b) => (a.route < b.route ? -1 : 1))
+                sortedBackData
                   .map((x, index) => (
                     <React.Fragment key={index}>
                       <Card classNames="p-2">
@@ -292,7 +377,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
           {routeStopData.length > 0 && (
             <Grid container spacing={0}>
               <Grid item xs={12} className="">
-                {routeStopData.map((s, i) => (
+                {sortedRouteStopData.map((s, i) => (
                   <FavStopCard
                     key={`${s.company}-${s.route}-${s.stopId}-${i}`}
                     stop={s}

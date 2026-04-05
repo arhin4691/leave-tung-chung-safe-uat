@@ -30,6 +30,7 @@ const itemVariants = {
 export default function Home() {
   const { t } = useLocale();
   const UPDATES = [
+    { date: "2026-04-06", info: t("update.2026-04-06"), version: "1.03" },
     { date: "2026-04-05", info: t("update.2026-04-05"), version: "1.02" },
     { date: "2026-04-04", info: t("update.2026-04-04"), version: "1.01" },
     { date: "2026-04-04", info: t("update.2026-04-04-2"), version: "1.0" },
@@ -150,12 +151,12 @@ export default function Home() {
                   borderBottom: updateLogOpen
                     ? "1px solid rgba(255,255,255,0.07)"
                     : "none",
-                  transition:
-                    "padding-bottom 0.2s, margin-bottom 0.2s",
+                  transition: "padding-bottom 0.2s, margin-bottom 0.2s",
                 }}
               >
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "7px" }}
+                  onClick={() => setUpdateLogOpen((o) => !o)}
                 >
                   <span
                     style={{
@@ -204,9 +205,7 @@ export default function Home() {
                     borderRadius: "9999px",
                     cursor: "pointer",
                     padding: "4px 11px",
-                    color: updateLogOpen
-                      ? "#30D158"
-                      : "var(--text-secondary)",
+                    color: updateLogOpen ? "#30D158" : "var(--text-secondary)",
                     fontSize: "12px",
                     fontWeight: 600,
                     fontFamily: "inherit",
