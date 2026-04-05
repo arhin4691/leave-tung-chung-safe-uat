@@ -4,7 +4,7 @@ import BusFavList from "@/shared/components/bus_routes/components/BusFavList";
 import { UpdateContext } from "@/shared/context/update-context";
 import { Grid } from "@mui/material";
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import RoadStatus from "@/shared/components/home/RoadStatus";
 import { useLocale } from "@/shared/context/locale-context";
 import { getFavStops } from "@/shared/util/favStops";
@@ -62,6 +62,9 @@ export default function Home() {
     }
   };
 
+  const [updateLogOpen, setUpdateLogOpen] = useState(false);
+  const [roadStatusOpen, setRoadStatusOpen] = useState(false);
+
   return (
     <UpdateContext.Provider
       value={{
@@ -113,7 +116,10 @@ export default function Home() {
           {/* ── Road Status ─────────────────────────── */}
           <Grid item xs={12} md={8}>
             <motion.div variants={itemVariants}>
-              <RoadStatus />
+              <RoadStatus
+                onToggle={() => setRoadStatusOpen((prev) => !prev)}
+                isOpen={roadStatusOpen}
+              />
             </motion.div>
           </Grid>
 
@@ -132,58 +138,154 @@ export default function Home() {
                 margin: "4px",
               }}
             >
+              {/* Section header */}
               <div
-                className="banner banner-primary center"
-                style={{ marginBottom: "10px" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingBottom: updateLogOpen ? "10px" : 0,
+                  marginBottom: updateLogOpen ? "8px" : 0,
+                  borderBottom: updateLogOpen
+                    ? "1px solid rgba(255,255,255,0.07)"
+                    : "none",
+                  transition:
+                    "padding-bottom 0.2s, margin-bottom 0.2s",
+                }}
               >
-                {t("home.updateLog")}
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "7px" }}
+                >
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "#30D158",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "14px",
+                      color: "var(--text-primary)",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {t("home.updateLog")}
+                  </span>
+                  <span
+                    style={{
+                      background: "rgba(48,209,88,0.15)",
+                      border: "1px solid rgba(48,209,88,0.3)",
+                      color: "#30D158",
+                      borderRadius: "9999px",
+                      padding: "1px 7px",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {UPDATES.length}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setUpdateLogOpen((o) => !o)}
+                  aria-label={updateLogOpen ? "collapse" : "expand"}
+                  style={{
+                    background: updateLogOpen
+                      ? "rgba(48,209,88,0.15)"
+                      : "rgba(255,255,255,0.07)",
+                    border: updateLogOpen
+                      ? "1px solid rgba(48,209,88,0.3)"
+                      : "1px solid transparent",
+                    borderRadius: "9999px",
+                    cursor: "pointer",
+                    padding: "4px 11px",
+                    color: updateLogOpen
+                      ? "#30D158"
+                      : "rgba(255,255,255,0.45)",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    fontFamily: "inherit",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    transition:
+                      "background 0.15s, color 0.15s, border-color 0.15s",
+                  }}
+                >
+                  <motion.span
+                    animate={{ rotate: updateLogOpen ? 180 : 0 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                    style={{ display: "inline-flex", lineHeight: 1 }}
+                  >
+                    ▾
+                  </motion.span>
+                </button>
               </div>
-              <Grid container spacing={1}>
-                {UPDATES.map((x, i) => (
-                  <Grid item xs={12} md={6} key={x.version}>
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{
-                        delay: 0.06 * i,
-                        type: "spring",
-                        stiffness: 300,
-                      }}
-                      style={{
-                        borderRadius: "var(--radius-sm, 10px)",
-                        background: "var(--glass-bg-hover)",
-                        border: "1px solid var(--glass-border)",
-                        padding: "10px 12px",
-                      }}
-                    >
-                      <div
-                        className="display-75"
-                        style={{
-                          color: "var(--text-primary)",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        {x.info}
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginTop: "4px",
-                        }}
-                      >
-                        <span className="badge-secondary-outline display-8">
-                          {t("about.version")}: {x.version}
-                        </span>
-                        <span className="badge-primary-super display-8">
-                          {x.date}
-                        </span>
-                      </div>
-                    </motion.div>
-                  </Grid>
-                ))}
-              </Grid>
+
+              {/* Collapsible items */}
+              <AnimatePresence initial={false}>
+                {updateLogOpen && (
+                  <motion.div
+                    key="changelog-content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 340, damping: 30 }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <Grid container spacing={1}>
+                      {UPDATES.map((x, i) => (
+                        <Grid item xs={12} md={6} key={x.version}>
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{
+                              delay: 0.06 * i,
+                              type: "spring",
+                              stiffness: 300,
+                            }}
+                            style={{
+                              borderRadius: "var(--radius-sm, 10px)",
+                              background: "var(--glass-bg-hover)",
+                              border: "1px solid var(--glass-border)",
+                              padding: "10px 12px",
+                            }}
+                          >
+                            <div
+                              className="display-75"
+                              style={{
+                                color: "var(--text-primary)",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              {x.info}
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginTop: "4px",
+                              }}
+                            >
+                              <span className="badge-secondary-outline display-8">
+                                {t("about.version")}: {x.version}
+                              </span>
+                              <span className="badge-primary-super display-8">
+                                {x.date}
+                              </span>
+                            </div>
+                          </motion.div>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </Grid>
         </Grid>

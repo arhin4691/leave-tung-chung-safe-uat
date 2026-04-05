@@ -43,6 +43,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
   const [routeStopData, setRouteStopData] = useState<FavRouteStop[]>(
     props.routeStopData ?? [],
   );
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     setData(props.data);
@@ -87,8 +88,78 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
   return (
     <>
       <Card disabled classNames="p-2">
-        <div className="display-7 banner banner-warning center m-1">
-          {t("home.favourite")}
+        {/* ── Section header ───────────────────────────────────── */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingBottom: "10px",
+            marginBottom: "8px",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "#FF9F0A",
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontWeight: 700,
+                fontSize: "14px",
+                color: "var(--text-primary)",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {t("home.favourite")}
+            </span>
+          </div>
+          <button
+            onClick={() => setEditMode((o) => !o)}
+            aria-label={editMode ? "done editing" : "edit favourites"}
+            style={{
+              background: editMode
+                ? "rgba(255,159,10,0.15)"
+                : "rgba(255,255,255,0.07)",
+              border: editMode
+                ? "1px solid rgba(255,159,10,0.35)"
+                : "1px solid transparent",
+              borderRadius: "9999px",
+              cursor: "pointer",
+              padding: "4px 11px",
+              color: editMode ? "#FF9F0A" : "rgba(255,255,255,0.45)",
+              fontSize: "12px",
+              fontWeight: 600,
+              fontFamily: "inherit",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              transition: "background 0.15s, color 0.15s, border-color 0.15s",
+            }}
+          >
+            {editMode ? (
+              <>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                {t("common.close")}
+              </>
+            ) : (
+              <>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="m18.5 2.5 3 3L12 15l-4 1 1-4Z" />
+                </svg>
+                Edit
+              </>
+            )}
+          </button>
         </div>
         <>
           <Grid container spacing={0}>
@@ -225,6 +296,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
                   <FavStopCard
                     key={`${s.company}-${s.route}-${s.stopId}-${i}`}
                     stop={s}
+                    showRemove={editMode}
                     onRemove={() => props.onRouteStopRemoved?.()}
                   />
                 ))}

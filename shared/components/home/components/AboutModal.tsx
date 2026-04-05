@@ -8,9 +8,14 @@ import { useLocale } from "@/shared/context/locale-context";
 interface AboutModalProps {
   version: string;
   releaseDate: string;
+  classes?: { [key: string]: string };
 }
 
-const AboutModal: React.FC<AboutModalProps> = ({ version, releaseDate }) => {
+const AboutModal: React.FC<AboutModalProps> = ({
+  version,
+  releaseDate,
+  classes,
+}) => {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
 
@@ -19,21 +24,13 @@ const AboutModal: React.FC<AboutModalProps> = ({ version, releaseDate }) => {
       {/* Header row — matches settingsPopover row style */}
       <button
         onClick={() => setOpen((o) => !o)}
+        className={classes.popoverRow}
         style={{
-          display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "12px",
           padding: "10px 14px",
           borderRadius: "12px",
-          cursor: "pointer",
           border: "none",
-          outline: "none",
-          background: "rgba(255,255,255,0.07)",
-          color: "rgba(255,255,255,0.86)",
-          fontSize: "13px",
-          fontWeight: 500,
-          fontFamily: "inherit",
           width: "100%",
           textAlign: "left",
         }}
@@ -42,7 +39,11 @@ const AboutModal: React.FC<AboutModalProps> = ({ version, releaseDate }) => {
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ type: "spring", stiffness: 400, damping: 28 }}
-          style={{ color: "rgba(255,255,255,0.52)", fontSize: "14px", lineHeight: 1 }}
+          style={{
+            color: "var(--text-secondary)",
+            fontSize: "14px",
+            lineHeight: 1,
+          }}
         >
           ▾
         </motion.span>
@@ -69,14 +70,19 @@ const AboutModal: React.FC<AboutModalProps> = ({ version, releaseDate }) => {
             >
               {/* Logo */}
               <div style={{ textAlign: "center", marginBottom: "12px" }}>
-                <Image src="/files/images/logo.png" alt="Logo" width={80} height={53} />
+                <Image
+                  src="/files/images/logo.png"
+                  alt="Logo"
+                  width={80}
+                  height={53}
+                />
               </div>
 
               {/* Dev note */}
               <div
                 style={{
                   fontSize: "12px",
-                  color: "rgba(255,255,255,0.72)",
+                  color: "var(--text-secondary)",
                   lineHeight: 1.6,
                   marginBottom: "12px",
                 }}
@@ -84,7 +90,11 @@ const AboutModal: React.FC<AboutModalProps> = ({ version, releaseDate }) => {
                 {t("about.devNotePrefix")}
                 <a
                   href={`mailto:leave.tung.chung.safe@gmail.com?subject=我想向東涌出行提供意見&body=版本號碼: ${version}%20%3A%0D%0A意見內容: `}
-                  style={{ color: "#34C759", marginInline: "3px", textDecoration: "none" }}
+                  style={{
+                    color: "#34C759",
+                    marginInline: "3px",
+                    textDecoration: "none",
+                  }}
                 >
                   {t("about.feedbackHere")}
                 </a>
@@ -110,7 +120,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ version, releaseDate }) => {
                   style={{
                     background: "rgba(255,255,255,0.07)",
                     border: "1px solid rgba(255,255,255,0.12)",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--text-secondary)",
                     borderRadius: "9999px",
                     padding: "2px 10px",
                     fontSize: "11px",

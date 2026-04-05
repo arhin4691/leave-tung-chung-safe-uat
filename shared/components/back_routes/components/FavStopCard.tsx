@@ -226,11 +226,13 @@ const EtaPill: React.FC<{
 
 interface FavStopCardProps {
   stop: FavRouteStop;
+  /** When true the heart/remove button is visible. Default: false. */
+  showRemove?: boolean;
   /** Called after the stop is removed from favourites */
   onRemove: () => void;
 }
 
-const FavStopCard: React.FC<FavStopCardProps> = ({ stop, onRemove }) => {
+const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onRemove }) => {
   const [etas, setEtas] = useState<RouteEtaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
@@ -399,28 +401,30 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, onRemove }) => {
             )}
           </div>
 
-          {/* Remove favourite */}
-          <motion.button
-            onClick={(e) => {
-              e.stopPropagation();
-              removeFavStop(stop.stopId, stop.route, stop.company);
-              onRemove();
-            }}
-            whileTap={{ scale: 0.75 }}
-            style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              flexShrink: 0,
-              color: "#FF453A",
-              fontSize: "16px",
-              lineHeight: 1,
-            }}
-            aria-label="從常用中移除"
-          >
-            ♥
-          </motion.button>
+          {/* Remove favourite — only visible in edit mode */}
+          {showRemove && (
+            <motion.button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeFavStop(stop.stopId, stop.route, stop.company);
+                onRemove();
+              }}
+              whileTap={{ scale: 0.75 }}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: "4px",
+                flexShrink: 0,
+                color: "#FF453A",
+                fontSize: "16px",
+                lineHeight: 1,
+              }}
+              aria-label="從常用中移除"
+            >
+              ♥
+            </motion.button>
+          )}
         </div>
       </motion.div>
 
