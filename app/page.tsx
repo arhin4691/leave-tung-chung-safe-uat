@@ -206,7 +206,7 @@ export default function Home() {
                     padding: "4px 11px",
                     color: updateLogOpen
                       ? "#30D158"
-                      : "rgba(255,255,255,0.45)",
+                      : "var(--text-secondary)",
                     fontSize: "12px",
                     fontWeight: 600,
                     fontFamily: "inherit",
