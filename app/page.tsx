@@ -30,6 +30,7 @@ const itemVariants = {
 export default function Home() {
   const { t } = useLocale();
   const UPDATES = [
+    { date: "2026-04-05", info: t("update.2026-04-05"), version: "1.02" },
     { date: "2026-04-04", info: t("update.2026-04-04"), version: "1.01" },
     { date: "2026-04-04", info: t("update.2026-04-04-2"), version: "1.0" },
     { date: "2024-02-26", info: t("update.2024-02-26"), version: "0.1708934" },

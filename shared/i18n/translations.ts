@@ -96,6 +96,7 @@ export const translations = {
     "update.2024-01-15": "新增 NLB 巴士路線和 ETA",
     "update.2023-12-20": "新增地鐵站停車場資訊",
     "update.2023-11-30": "新增巴士站搜尋和常用功能",
+    "update.2026-04-05": "增強介面和修復一些小問題",
   },
   en: {
     // Navigation

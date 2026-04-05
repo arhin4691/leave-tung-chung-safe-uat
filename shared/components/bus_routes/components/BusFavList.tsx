@@ -133,7 +133,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
               borderRadius: "9999px",
               cursor: "pointer",
               padding: "4px 11px",
-              color: editMode ? "#FF9F0A" : "rgba(255,255,255,0.45)",
+              color: editMode ? "#FF9F0A" : "var(--text-secondary)",
               fontSize: "12px",
               fontWeight: 600,
               fontFamily: "inherit",
