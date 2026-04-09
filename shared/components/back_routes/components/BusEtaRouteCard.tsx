@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { StopEtaRow, StopEtaSlot } from "@/shared/types";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface BusEtaRouteCardProps {
   row: StopEtaRow;
@@ -23,7 +24,7 @@ function calcMin(etaStr: string, now: number): number {
   return Math.floor((Date.parse(etaStr) / 1000 - now) / 60);
 }
 
-function renderEtaPill(slot: StopEtaSlot, now: number, isFirst: boolean) {
+function renderEtaPill(slot: StopEtaSlot, now: number, isFirst: boolean, t: (key: string) => string) {
   if (!slot.eta) return null;
   const min = calcMin(slot.eta, now);
   const isArriving = min <= 0;
@@ -43,11 +44,11 @@ function renderEtaPill(slot: StopEtaSlot, now: number, isFirst: boolean) {
       ].join(" ")}
     >
       {isArriving ? (
-        <span className="eta-pill-label">到達</span>
+        <span className="eta-pill-label">{t("common.arriving")}</span>
       ) : (
         <>
           <span className="eta-pill-minutes">{min}</span>
-          <span className="eta-pill-unit">分</span>
+          <span className="eta-pill-unit">{t("common.min")}</span>
         </>
       )}
       {slot.rmk_tc && (
@@ -60,6 +61,7 @@ function renderEtaPill(slot: StopEtaSlot, now: number, isFirst: boolean) {
 }
 
 const BusEtaRouteCard: React.FC<BusEtaRouteCardProps> = ({ row, now }) => {
+  const { t } = useLocale();
   const cfg = CO_CONFIG[row.co] ?? {
     accentColor: "#888",
     badgeClass: "badge-secondary",
@@ -94,12 +96,12 @@ const BusEtaRouteCard: React.FC<BusEtaRouteCardProps> = ({ row, now }) => {
         {/* ETA pills row */}
         {validSlots.length === 0 ? (
           <div className="eta-no-service">
-            <span className="badge-danger">暫停服務</span>
+            <span className="badge-danger">{t("bus.suspended")}</span>
           </div>
         ) : (
           <div className="eta-times-row">
             {validSlots.map((slot, i) =>
-              renderEtaPill(slot, now, i === 0)
+              renderEtaPill(slot, now, i === 0, t)
             )}
           </div>
         )}

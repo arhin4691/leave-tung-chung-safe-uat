@@ -523,7 +523,7 @@ const MTRRoutes: React.FC = () => {
         className="display-5 mb-2"
         style={{
           fontWeight: 800,
-          color: "rgba(255,255,255,0.93)",
+          color: "var(--text-primary)",
           letterSpacing: "-0.01em",
         }}
       >

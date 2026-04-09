@@ -25,6 +25,7 @@ import type {
 } from "@/shared/types";
 import { toggleFavStop, isFavStop, getFavStops } from "@/shared/util/favStops";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
+import { useLocale } from "@/shared/context/locale-context";
 
 const ETA_POLL_MS = 15_000;
 
@@ -254,6 +255,7 @@ async function fetchMtrBusSchedule(
 // ?? Component ?????????????????????????????????????????????????????
 
 const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [stops, setStops] = useState<NormalisedStop[]>([]);
   const [etas, setEtas] = useState<Record<string, RouteEtaItem[]>>({});
@@ -422,7 +424,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
               }}
               className="display-7"
             >
-              <span className="display-8">往</span> {entry.dest_tc}
+              <span className="display-8">{t("common.towards")}</span> {entry.dest_tc}
             </div>
             <div
               style={{
@@ -470,7 +472,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
                   color: isWorking ? "#34C759" : "#FF453A",
                 }}
               >
-                {isWorking ? "有服務" : "無服務"}
+                {isWorking ? t("common.inService") : t("common.noService")}
               </span>
             )}
           </div>
@@ -518,7 +520,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
                       letterSpacing: "0.04em",
                     }}
                   >
-                    站號 &nbsp;|&nbsp; 站名
+                    {t("bus.stopColHeader")}
                   </span>
                   <span
                     style={{
@@ -527,7 +529,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
                       fontWeight: 600,
                     }}
                   >
-                    {loadingEta ? "更新中\u2026" : "預計到達"}
+                    {loadingEta ? t("common.updating") : t("bus.etaColHeader")}
                   </span>
                 </div>
 
@@ -548,7 +550,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
                       fontSize: "13px",
                     }}
                   >
-                    找不到站點資料
+                    {t("bus.noStopData")}
                   </div>
                 )}
 
@@ -610,7 +612,22 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
       </motion.div>
 
       {/* ?? Stop detail modal ???????????????????????? */}
-      <BusStopModal info={selectedStop} onClose={() => setSelectedStop(null)} />
+      <BusStopModal
+        info={selectedStop}
+        onClose={() => setSelectedStop(null)}
+        stopList={stops.map((stop) => ({
+          stopId: stop.id,
+          name_tc: stop.name_tc,
+          name_en: stop.name_en,
+          lat: stop.lat,
+          long: stop.long,
+          etas: etas[stop.id] ?? [],
+          company: entry.company,
+          route: entry.route,
+          dest_tc: entry.dest_tc,
+        }))}
+        onNavigate={setSelectedStop}
+      />
     </>
   );
 };

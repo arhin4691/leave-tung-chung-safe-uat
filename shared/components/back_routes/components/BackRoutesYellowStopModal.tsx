@@ -6,6 +6,7 @@ import Button from "../../ui/Button";
 import { Grid } from "@mui/material";
 import { UpdateContext } from "@/shared/context/update-context";
 import Card from "../../ui/Card";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface BackRoutesYellowStopModalProps {
   onClose: () => void;
@@ -27,6 +28,7 @@ interface BackRoutesYellowStopModalProps {
 }
 
 const BackRoutesYellowStopModal: React.FC<BackRoutesYellowStopModalProps> = (props) => {
+  const { t } = useLocale();
   const updateCtx = useContext(UpdateContext);
 
   const obj = {
@@ -110,21 +112,21 @@ const BackRoutesYellowStopModal: React.FC<BackRoutesYellowStopModalProps> = (pro
       <Grid item xs={8}>
         {calcMin(etaTs) <= 0 ? (
           <span className={`badge-success-animate center ${size}`}>
-            <span className="display-75 text-left">往 </span>
+            <span className="display-75 text-left">{t("common.towards")} </span>
             {props.termName}
           </span>
         ) : (
           <div
             className={`${calcMin(etaTs) <= 5 ? "badge-warning-animate" : "badge-primary-super"} center ${size}`}
           >
-            <span className="display-75 text-left">往 </span>
+            <span className="display-75 text-left">{t("common.towards")} </span>
             {props.termName}
           </div>
         )}
       </Grid>
       <Grid item xs={4}>
         {calcMin(etaTs) <= 0 ? (
-          <span className={`badge-success-animate center ${size}`}>到達</span>
+          <span className={`badge-success-animate center ${size}`}>{t("common.arriving")}</span>
         ) : (
           <div
             className={`${calcMin(etaTs) <= 5 ? "badge-warning-animate" : "badge-primary-super"} center ${size}`}
@@ -132,7 +134,7 @@ const BackRoutesYellowStopModal: React.FC<BackRoutesYellowStopModalProps> = (pro
             {calcMin(etaTs) ? (
               calcMin(etaTs)
             ) : (
-              <span className="display-75">未有服務</span>
+              <span className="display-75">{t("common.noService")}</span>
             )}
           </div>
         )}
@@ -148,7 +150,7 @@ const BackRoutesYellowStopModal: React.FC<BackRoutesYellowStopModalProps> = (pro
         {props.eta.eta.length > 2 && renderRow(props.eta.eta[2].timestamp, "display-75")}
       </>
     ) : (
-      <span className="badge-danger">未有服務</span>
+      <span className="badge-danger">{t("common.noService")}</span>
     );
 
   const map = (
@@ -192,7 +194,7 @@ const BackRoutesYellowStopModal: React.FC<BackRoutesYellowStopModalProps> = (pro
 
   const footer = (
     <Button outline onClick={props.onClose}>
-      關閉
+      {t("common.close")}
     </Button>
   );
 

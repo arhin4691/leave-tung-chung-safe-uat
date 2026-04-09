@@ -5,6 +5,7 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import BackRoutesItemsNLBStop from "./BackRoutesItemsNLBStop";
 import Card from "../../ui/Card";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface BackRoutesItemsNLBProps {
   routeId: string | number;
@@ -12,6 +13,7 @@ interface BackRoutesItemsNLBProps {
 }
 
 const BackRoutesItemsNLB: React.FC<BackRoutesItemsNLBProps> = (props) => {
+  const { t } = useLocale();
   const LogoNLB = "/files/images/logo_nlb.png";
   const [stops, setStops] = useState<any[]>([]);
   const [isWorking, setIsWorking] = useState<boolean>(false);
@@ -68,7 +70,7 @@ const BackRoutesItemsNLB: React.FC<BackRoutesItemsNLBProps> = (props) => {
           <Grid container spacing={0}>
             <Grid item xs={9}>
               <span className="display-75 badge-primary-super align-left">
-                <span className="display-9">往　</span>
+                <span className="display-9">{t("common.towards")}　</span>
                 {stops.length > 0 && stops[stops.length - 1].stopName_c}
               </span>
             </Grid>
@@ -76,7 +78,7 @@ const BackRoutesItemsNLB: React.FC<BackRoutesItemsNLBProps> = (props) => {
               <span
                 className={`${isWorking ? "badge-success-animate" : "badge-danger"} display-75 align-right`}
               >
-                {isWorking ? "提供服務" : "未有服務"}
+                {isWorking ? t("common.inService") : t("common.noService")}
               </span>
             </Grid>
           </Grid>
@@ -88,11 +90,11 @@ const BackRoutesItemsNLB: React.FC<BackRoutesItemsNLBProps> = (props) => {
           </Grid>
           <Grid item xs={9}>
             <span className="badge-primary align-left">
-              <span className="display-8"> ➤ 由</span>{" "}
+              <span className="display-8"> ➤ {t("route.from")}</span>{" "}
               <span className="display-7">
                 {stops.length > 0 && stops[0].stopName_c}{" "}
               </span>
-              <span className="display-8">開出</span>
+                <span className="display-8">{t("route.depart")}</span>
             </span>
             <span className="align-right text-primary display-6">
               {open ? "△" : "▽"}

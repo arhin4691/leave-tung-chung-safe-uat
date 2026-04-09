@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import BackRoutesYellowStopModal from "./BackRoutesYellowStopModal";
 import { Box, Grid, LinearProgress } from "@mui/material";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface BackRoutesItemsYellowStopProps {
   stopId: string | number;
@@ -20,6 +21,7 @@ interface BackRoutesItemsYellowStopProps {
 }
 
 const BackRoutesItemsYellowStop: React.FC<BackRoutesItemsYellowStopProps> = (props) => {
+  const { t } = useLocale();
   const [modal, setModal] = useState<boolean>(false);
   const [now, setNow] = useState<number>(Math.floor(Date.now() / 1000));
   const [eta, setEta] = useState<any[]>([]);
@@ -85,7 +87,7 @@ const BackRoutesItemsYellowStop: React.FC<BackRoutesItemsYellowStopProps> = (pro
         <Grid item xs={8}>
           <div className="badge-primary center display-75">
             {props.site === "fav" && (
-              <span className="badge-secondary align-left">起點: </span>
+              <span className="badge-secondary align-left">{t("bus.startStop")}</span>
             )}
             <span className={`${props.site === "fav" ? "display-7 p-1" : "display-75"}`}>
               {data[props.stopSeq - 1]?.name_tc}
@@ -100,7 +102,7 @@ const BackRoutesItemsYellowStop: React.FC<BackRoutesItemsYellowStopProps> = (pro
               <span
                 className={`badge-success-animate center ${props.site === "fav" ? "display-7 p-1" : "display-75"}`}
               >
-                到達
+                {t("common.arriving")}
               </span>
             ) : Math.floor(
                 (Date.parse(etaEntry?.eta[0]?.timestamp) / 1000 - now) / 60
@@ -122,7 +124,7 @@ const BackRoutesItemsYellowStop: React.FC<BackRoutesItemsYellowStopProps> = (pro
               <span
                 className={`badge-danger center ${props.site === "fav" ? "display-7 p-1" : "display-75"}`}
               >
-                未有服務
+                {t("common.noService")}
               </span>
             )}
           </Grid>

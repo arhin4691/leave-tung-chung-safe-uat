@@ -5,6 +5,7 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import BackRoutesItemsCTBStop from "./BackRoutesItemsCTBStop";
 import Card from "../../ui/Card";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface StopData {
   stop: string;
@@ -24,6 +25,7 @@ interface BackRoutesItemsCTBProps {
 }
 
 const BackRoutesItemsCTB: React.FC<BackRoutesItemsCTBProps> = (props) => {
+  const { t } = useLocale();
   const LogoCTB = "/files/images/logo_ctb.png";
 
   const [stops, setStops] = useState<StopData[]>([]);
@@ -84,14 +86,14 @@ const BackRoutesItemsCTB: React.FC<BackRoutesItemsCTBProps> = (props) => {
             <Grid container spacing={0}>
               <Grid item xs={9}>
                 <span className="display-75 badge-primary-super align-left">
-                  <span className="display-9">往　</span> {props.end}
+                  <span className="display-9">{t("common.towards")}　</span> {props.end}
                 </span>
               </Grid>
               <Grid item xs={3}>
                 <span
                   className={`${isWorking ? "badge-success-animate" : "badge-danger"} display-75 align-right`}
                 >
-                  {isWorking ? "提供服務" : "未有服務"}
+                  {isWorking ? t("common.inService") : t("common.noService")}
                 </span>
               </Grid>
             </Grid>
@@ -103,9 +105,9 @@ const BackRoutesItemsCTB: React.FC<BackRoutesItemsCTBProps> = (props) => {
             </Grid>
             <Grid item xs={9}>
               <span className="badge-primary align-left">
-                <span className="display-8"> ➤ 由 </span>
+                <span className="display-8"> ➤ {t("route.from")} </span>
                 <span className="display-7">{props.start}</span>
-                <span className="display-8">開出</span>
+                <span className="display-8">{t("route.depart")}</span>
               </span>
               <span className="align-right text-primary display-6" onClick={toggleHandler}>
                 {open ? "△" : "▽"}
@@ -131,7 +133,7 @@ const BackRoutesItemsCTB: React.FC<BackRoutesItemsCTBProps> = (props) => {
                   ) : (
                     <Box>
                       <LinearProgress />
-                      <span className="text-primary center">正在為你準備列表</span>
+                      <span className="text-primary center">{t("bus.preparing")}</span>
                     </Box>
                   )}
                 </Card>

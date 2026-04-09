@@ -10,9 +10,10 @@
  */
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { motion } from "framer-motion";
 import type { RouteEtaItem, SelectedStopInfo } from "@/shared/types";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface StopEtaRowProps {
   seq: number;
@@ -64,11 +65,12 @@ function resolveMinutes(item: RouteEtaItem, now: number): number | null {
   return minsUntil(item.eta, now);
 }
 
-const EtaBadge: React.FC<{ item: RouteEtaItem; now: number; rank: number }> = ({
+const EtaBadge: React.FC<{ item: RouteEtaItem; now: number; rank: number }> = memo(({
   item,
   now,
   rank,
 }) => {
+  const { t } = useLocale();
   const rmk = item.rmk_tc || item.rmk_en;
   const mins = resolveMinutes(item, now);
 
@@ -109,7 +111,7 @@ const EtaBadge: React.FC<{ item: RouteEtaItem; now: number; rank: number }> = ({
           textAlign: "center",
         }}
       >
-        到達
+        {t("common.arriving")}
       </motion.span>
     );
   }
@@ -141,12 +143,12 @@ const EtaBadge: React.FC<{ item: RouteEtaItem; now: number; rank: number }> = ({
       }}
     >
       {mins}
-      <span style={{ fontSize: rank === 0 ? "11px" : "9px", fontWeight: 500 }}>分</span>
+      <span style={{ fontSize: rank === 0 ? "11px" : "9px", fontWeight: 500 }}>{t("common.min")}</span>
     </span>
   );
-};
+}) as React.FC<{ item: RouteEtaItem; now: number; rank: number }>;
 
-const StopEtaRow: React.FC<StopEtaRowProps> = ({
+const StopEtaRow: React.FC<StopEtaRowProps> = memo(({
   seq,
   stopId,
   name_tc,
@@ -162,6 +164,7 @@ const StopEtaRow: React.FC<StopEtaRowProps> = ({
   isFav = false,
   onToggleFav,
 }) => {
+  const { t } = useLocale();
   // Filter out departed/empty ETAs for inline display
   const displayEtas = etas.filter((e) => resolveMinutes(e, now) !== null || (e.rmk_tc || e.rmk_en));
   const first = displayEtas[0] ?? null;
@@ -263,7 +266,7 @@ const StopEtaRow: React.FC<StopEtaRowProps> = ({
       >
         {displayEtas.length === 0 ? (
           <span className="display-8" style={{ color: "var(--text-secondary)" }}>
-            無班次
+            {t("common.noEta")}
           </span>
         ) : (
           <>
@@ -297,7 +300,7 @@ const StopEtaRow: React.FC<StopEtaRowProps> = ({
             lineHeight: 1,
             transition: "color 0.15s",
           }}
-          aria-label={isFav ? "從常用中移除" : "加入常用"}
+          aria-label={isFav ? t("fav.removeStop") : t("fav.addStop")}
           aria-pressed={isFav}
         >
           {isFav ? "♥" : "♡"}
@@ -305,6 +308,6 @@ const StopEtaRow: React.FC<StopEtaRowProps> = ({
       )}
     </motion.div>
   );
-};
+}) as React.FC<StopEtaRowProps>;
 
 export default StopEtaRow;

@@ -6,6 +6,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { useLocale } from "@/shared/context/locale-context";
 
 export type CompanyFilter = "ALL" | "KMB" | "CTB" | "NLB" | "MTRBUS";
 
@@ -23,6 +24,7 @@ interface CompanyFilterChipsProps {
 }
 
 const CompanyFilterChips: React.FC<CompanyFilterChipsProps> = ({ value, onChange }) => {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -59,7 +61,7 @@ const CompanyFilterChips: React.FC<CompanyFilterChipsProps> = ({ value, onChange
               boxShadow: active ? `0 2px 12px ${chip.color}55` : "none",
             }}
           >
-            {chip.label}
+            {chip.value === "ALL" ? t("common.all") : chip.label}
           </motion.button>
         );
       })}

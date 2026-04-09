@@ -3,6 +3,7 @@
 import { Box, Grid, LinearProgress } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import BackRoutesModal from "./BackRoutesModal";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface BackRoutesItemsCTBStopProps {
   stop: any;
@@ -17,6 +18,7 @@ interface BackRoutesItemsCTBStopProps {
 }
 
 const BackRoutesItemsCTBStop: React.FC<BackRoutesItemsCTBStopProps> = (props) => {
+  const { t } = useLocale();
   // Use parent-supplied ETA; track a local clock for countdown display
   const eta: any[] = props.eta ?? [];
   const [now, setNow] = useState<number>(Math.floor(Date.now() / 1000));
@@ -52,7 +54,7 @@ const BackRoutesItemsCTBStop: React.FC<BackRoutesItemsCTBStopProps> = (props) =>
         <Grid item xs={8}>
           <div className="badge-primary center display-75">
             {props.site === "fav" && (
-              <span className="badge-secondary align-left">起點: </span>
+              <span className="badge-secondary align-left">{t("bus.startStop")}</span>
             )}
             <span className={`${props.site === "fav" ? "display-7 p-1" : "display-75"}`}>
               {props.stop?.name_tc?.replace(",", "").split(" ")[0]}
@@ -65,10 +67,10 @@ const BackRoutesItemsCTBStop: React.FC<BackRoutesItemsCTBStopProps> = (props) =>
               <span
                 className={`badge-success-animate center ${props.site === "fav" ? "display-7" : "display-75"}`}
               >
-                到達
+                {t("common.arriving")}
                 {props.site !== "fav" && props.mode === "reverse"
-                  ? eta[0].dir === "I" && "回程車"
-                  : eta[0].dir === "O" && "回程車"}
+                  ? eta[0].dir === "I" && t("bus.returnBus")
+                  : eta[0].dir === "O" && t("bus.returnBus")}
               </span>
             ) : eta.length > 0 &&
               Math.floor((Date.parse(eta[0].eta) / 1000 - now) / 60) ? (
@@ -85,7 +87,7 @@ const BackRoutesItemsCTBStop: React.FC<BackRoutesItemsCTBStopProps> = (props) =>
                       {props.site !== "fav" && eta[0].dir === "O" ? (
                         <span className="display-9">
                           {Math.floor((Date.parse(eta[0].eta) / 1000 - now) / 60)}{" "}
-                          {"回程車"}
+                          {t("bus.returnBus")}
                         </span>
                       ) : (
                         Math.floor((Date.parse(eta[0].eta) / 1000 - now) / 60)
@@ -96,7 +98,7 @@ const BackRoutesItemsCTBStop: React.FC<BackRoutesItemsCTBStopProps> = (props) =>
                       {props.site !== "fav" && eta[0].dir === "I" ? (
                         <span className="display-9">
                           {Math.floor((Date.parse(eta[0].eta) / 1000 - now) / 60)}{" "}
-                          {"回程車"}
+                          {t("bus.returnBus")}
                         </span>
                       ) : (
                         Math.floor((Date.parse(eta[0].eta) / 1000 - now) / 60)
@@ -113,7 +115,7 @@ const BackRoutesItemsCTBStop: React.FC<BackRoutesItemsCTBStopProps> = (props) =>
           </Grid>
         ) : (
           <Grid item xs={4}>
-            <span className="badge-danger center display-75">未有服務</span>
+            <span className="badge-danger center display-75">{t("common.noService")}</span>
           </Grid>
         )}
       </Grid>

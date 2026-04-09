@@ -213,7 +213,7 @@ const NavButton: React.FC = () => {
                   {isZh ? "EN" : "中"}
                 </span>
               </button>
-              <AboutModal version="1.01" releaseDate="2026-04-04" classes={classes} />
+              <AboutModal version="1.04" releaseDate="2026-04-09" classes={classes} />
             </motion.div>
           </div>
         )}

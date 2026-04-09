@@ -5,6 +5,7 @@ import Card from "../../ui/Card";
 import { Box, Grid, LinearProgress } from "@mui/material";
 import Image from "next/image";
 import BackRoutesItemsYellowStop from "./BackRoutesItemsYellowStop";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface BackRoutesItemsYellowProps {
   routeSeq: number;
@@ -14,6 +15,7 @@ interface BackRoutesItemsYellowProps {
 }
 
 const BackRoutesItemsYellow: React.FC<BackRoutesItemsYellowProps> = (props) => {
+  const { t } = useLocale();
   const LogoYellow = "/files/images/logo_yellow.png";
 
   const [isWorking, setIsWorking] = useState<boolean>(false);
@@ -58,14 +60,14 @@ const BackRoutesItemsYellow: React.FC<BackRoutesItemsYellowProps> = (props) => {
         <Grid container spacing={0}>
           <Grid item xs={9}>
             <span className="display-75 badge-primary-super align-left">
-              <span className="display-9">往　</span> {props.directions?.dest_tc}
+              <span className="display-9">{t("common.towards")}　</span> {props.directions?.dest_tc}
             </span>
           </Grid>
           <Grid item xs={3}>
             <span
               className={`${isWorking ? "badge-success-animate" : "badge-danger"} display-75 align-right`}
             >
-              {isWorking ? "提供服務" : "未有服務"}
+              {isWorking ? t("common.inService") : t("common.noService")}
             </span>
           </Grid>
         </Grid>
@@ -77,9 +79,9 @@ const BackRoutesItemsYellow: React.FC<BackRoutesItemsYellowProps> = (props) => {
         </Grid>
         <Grid item xs={9}>
           <span className="badge-primary align-left">
-            <span className="display-8"> ➤ 由 </span>
+            <span className="display-8"> ➤ {t("route.from")} </span>
             <span className="display-7">{props.directions?.orig_tc}</span>
-            <span className="display-8">開出</span>
+            <span className="display-8">{t("route.depart")}</span>
           </span>
           <span
             className="align-right text-primary display-6"
@@ -112,7 +114,7 @@ const BackRoutesItemsYellow: React.FC<BackRoutesItemsYellowProps> = (props) => {
                 ) : (
                   <Box>
                     <LinearProgress />
-                    <span className="text-primary center">正在為你準備列表</span>
+                    <span className="text-primary center">{t("bus.preparing")}</span>
                   </Box>
                 )}
               </Card>

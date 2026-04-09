@@ -5,6 +5,7 @@ import Image from "next/image";
 import React, { useEffect, useState, useCallback } from "react";
 import BackRoutesItemsStop from "./BackRoutesItemsStop";
 import Card from "../../ui/Card";
+import { useLocale } from "@/shared/context/locale-context";
 
 interface BackRoutesItemsProps {
   fullList: any[];
@@ -13,6 +14,7 @@ interface BackRoutesItemsProps {
 }
 
 const BackRoutesItems: React.FC<BackRoutesItemsProps> = (props) => {
+  const { t } = useLocale();
   const LogoLWB = "/files/images/logo_lwb.png";
   const [routeStops, setRouteStops]   = useState<any[]>([]);
   const [isWorking, setIsWorking]     = useState<boolean>(false);
@@ -60,7 +62,7 @@ const BackRoutesItems: React.FC<BackRoutesItemsProps> = (props) => {
           <Grid container spacing={0}>
             <Grid item xs={9}>
               <span className="display-75 badge-primary-super align-left">
-                <span className="display-9">往　</span>
+                <span className="display-9">{t("common.towards")}　</span>
                 {routeStops.length > 0 && routeStops[routeStops.length - 1]?.name_tc}
               </span>
             </Grid>
@@ -68,7 +70,7 @@ const BackRoutesItems: React.FC<BackRoutesItemsProps> = (props) => {
               <span
                 className={`${isWorking ? "badge-success-animate" : "badge-danger"} display-75 align-right`}
               >
-                {isWorking ? "提供服務" : "未有服務"}
+                {isWorking ? t("common.inService") : t("common.noService")}
               </span>
             </Grid>
           </Grid>
@@ -80,11 +82,11 @@ const BackRoutesItems: React.FC<BackRoutesItemsProps> = (props) => {
           </Grid>
           <Grid item xs={9}>
             <span className="badge-primary align-left">
-              <span className="display-8"> ➤ 由</span>{" "}
+                <span className="display-8">➤ {t("route.from")}</span>{" "}
               <span className="display-7">
                 {routeStops.length > 0 && routeStops[0]?.name_tc}{" "}
               </span>
-              <span className="display-8">開出</span>
+              <span className="display-8">{t("route.depart")}</span>
             </span>
             <span className="align-right text-primary display-6">
               {open ? "△" : "▽"}
@@ -96,17 +98,17 @@ const BackRoutesItems: React.FC<BackRoutesItemsProps> = (props) => {
           <Grid container spacing={0}>
             <Grid item xs={12}>
               <Card disabled classNames="p-2">
-                <span className="badge-secondary">時刻表</span>
+                <span className="badge-secondary">{t("bus.timetable")}</span>
                 {timeTable[0] && (
                   <>
                     <span className="badge-primary-outline display-9 center">
-                      星期一至五{timeTable[0].Desc_CHI}: {timeTable[0].From_weekday} - {timeTable[0].To_weekday}
+                      {t("bus.weekday")}{timeTable[0].Desc_CHI}: {timeTable[0].From_weekday} - {timeTable[0].To_weekday}
                     </span>
                     <span className="badge-primary-outline display-9 center">
-                      星期六{timeTable[0].Desc_CHI}: {timeTable[0].From_saturday} - {timeTable[0].To_saturday}
+                      {t("bus.saturday")}{timeTable[0].Desc_CHI}: {timeTable[0].From_saturday} - {timeTable[0].To_saturday}
                     </span>
                     <span className="badge-primary-outline display-9 center">
-                      星期日及公眾假期{timeTable[0].Desc_CHI}: {timeTable[0].From_holiday} - {timeTable[0].To_holiday}
+                      {t("bus.holiday")}{timeTable[0].Desc_CHI}: {timeTable[0].From_holiday} - {timeTable[0].To_holiday}
                     </span>
                   </>
                 )}

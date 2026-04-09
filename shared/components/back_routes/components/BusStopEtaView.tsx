@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BusEtaRouteCard from "./BusEtaRouteCard";
 import type { StopEtaRow, StopEtaSlot, EtaEntry } from "@/shared/types";
+import { useLocale } from "@/shared/context/locale-context";
+import type { TranslationKey } from "@/shared/i18n/translations";
 
 interface BusStopEtaViewProps {
   /** KMB or CTB stop ID */
@@ -24,7 +26,7 @@ interface BusStopEtaViewProps {
   nlbDestEn?: string;
 }
 
-type CompanyFilter = "全部" | string;
+type CompanyFilter = "ALL" | string;
 
 const REFRESH_SEC = 30;
 
@@ -36,13 +38,13 @@ const CO_COLORS: Record<string, string> = {
   NLB: "#00A651",
 };
 
-const CO_LABELS: Record<string, string> = {
-  KMB: "九龍巴士 KMB",
-  LWB: "龍運巴士 LWB",
-  CTB: "城巴 CTB",
-  NWFB: "新世界第一 NWFB",
-  NLB: "嶼巴 NLB",
-  MTRBUS: "港鐵巴士 MTR Bus",
+const CO_LABEL_KEYS: Record<string, TranslationKey> = {
+  KMB: "company.KMB",
+  LWB: "company.LWB",
+  CTB: "company.CTB",
+  NWFB: "company.NWFB",
+  NLB: "company.NLB",
+  MTRBUS: "company.MTRBUS",
 };
 
 const RefreshIcon = () => (
@@ -78,12 +80,13 @@ const MapPinIcon = () => (
 );
 
 const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
+  const { t } = useLocale();
   const [rows, setRows] = useState<StopEtaRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  const [filter, setFilter] = useState<CompanyFilter>("全部");
+  const [filter, setFilter] = useState<CompanyFilter>("ALL");
   const [countdown, setCountdown] = useState(REFRESH_SEC);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -143,7 +146,7 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
   const presentCompanies = [...new Set(rows.map((r) => r.co))];
 
   const filteredRows =
-    filter === "全部" ? rows : rows.filter((r) => r.co === filter);
+    filter === "ALL" ? rows : rows.filter((r) => r.co === filter);
 
   // Put currentRoute first inside each company group
   const sortedRows = [...filteredRows].sort((a, b) => {
@@ -186,13 +189,13 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
 
   // ── Last-refresh label ────────────────────────────────────────
   const refreshLabel = lastRefresh
-    ? `更新於 ${lastRefresh.toLocaleTimeString("zh-HK", {
+    ? `${t("bus.updatedAt")} ${lastRefresh.toLocaleTimeString("zh-HK", {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
       })}`
-    : "正在載入…";
+    : t("common.loading");
 
   return (
     <div className="eta-stop-view">
@@ -211,17 +214,17 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
               target="_blank"
               rel="noopener noreferrer"
               className="eta-map-btn"
-              aria-label="在地圖上查看巴士站"
+              aria-label={t("bus.viewOnMap")}
             >
               <MapPinIcon />
-              地圖
+              {t("bus.mapBtn")}
             </a>
           )}
           <button
             className={`eta-refresh-btn${isLoading ? " eta-refresh-spinning" : ""}`}
             onClick={handleRefresh}
             disabled={isLoading}
-            aria-label="立即更新班次"
+            aria-label="Refresh"
             type="button"
           >
             <RefreshIcon />
@@ -238,15 +241,15 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
             style={{ width: `${(countdown / REFRESH_SEC) * 100}%` }}
           />
         </div>
-        <span className="eta-refresh-next">{countdown}秒</span>
+        <span className="eta-refresh-next">{countdown}{t("common.sec")}</span>
       </div>
 
       {/* ── Company filter chips ────────────────────────────── */}
       {props.company !== "nlb" && presentCompanies.length > 0 && (
-        <div className="eta-filter-row" role="group" aria-label="篩選巴士公司">
-          {(["全部" as CompanyFilter, ...presentCompanies]).map((co) => {
+        <div className="eta-filter-row" role="group" aria-label={t("bus.filterAriaLabel" as TranslationKey) || "Filter"}>
+          {(["ALL" as CompanyFilter, ...presentCompanies]).map((co) => {
             const count =
-              co === "全部"
+              co === "ALL"
                 ? rows.length
                 : rows.filter((r) => r.co === co).length;
             const active = filter === co;
@@ -256,7 +259,7 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
                 type="button"
                 className={`eta-filter-chip${active ? " eta-filter-chip-active" : ""}`}
                 style={
-                  active && co !== "全部"
+                  active && co !== "ALL"
                     ? {
                         borderColor: CO_COLORS[co] ?? undefined,
                         color: CO_COLORS[co] ?? undefined,
@@ -268,7 +271,7 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
                 onClick={() => setFilter(co)}
                 aria-pressed={active}
               >
-                {co === "全部" ? "全部" : (CO_LABELS[co] ?? co)}
+                {co === "ALL" ? t("common.all") : (t((CO_LABEL_KEYS[co] ?? co) as TranslationKey) ?? co)}
                 <span className="eta-chip-count">{count}</span>
               </button>
             );
@@ -309,9 +312,9 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
         {props.company !== "nlb" && hasFetched && filteredRows.length === 0 && (
           <div className="eta-empty-state">
             <div className="eta-empty-icon">🚌</div>
-            <div className="eta-empty-title">暫無班次資料</div>
+            <div className="eta-empty-title">{t("bus.noEtaTitle")}</div>
             <div className="eta-empty-sub">
-              此站目前沒有班次，請稍後重試。
+              {t("bus.noEtaDesc")}
             </div>
           </div>
         )}
@@ -330,8 +333,8 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
                   style={{ background: CO_COLORS[co] ?? "#888" }}
                   aria-hidden="true"
                 />
-                {CO_LABELS[co] ?? co}
-                <span className="eta-company-count">{coRows.length} 條路線</span>
+                {t((CO_LABEL_KEYS[co] ?? co) as TranslationKey) ?? co}
+                <span className="eta-company-count">{coRows.length} {t("bus.routesSuffix")}</span>
               </div>
 
               <AnimatePresence initial={false}>
