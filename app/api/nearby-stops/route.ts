@@ -1,88 +1,166 @@
 /**
- * /api/nearby-stops — Find bus stops from other operators near a given coordinate
+ * Find same-pole bus stops across KMB, CTB, NLB and MTR Bus.
  *
- * Used by BusStopModal to discover routes from different operators at the same
- * physical location even when they use different stop ID registries.
- *
- * Strategy:
- *   KMB + CTB share the same stop ID registry — a bulk KMB stop list is fetched
- *   (cached 24 h) and filtered with a Haversine radius check.  The found KMB stop
- *   IDs are also valid CTB stop IDs.
- *
- *   MTR Bus stop coordinates are pre-computed from mtr_bus_stops_raw.csv and
- *   stored in the static MTR_BUS_STOP_LOCATIONS map, keyed by busStopId.
- *   The MTR_BUS_ROUTES_BY_STOP map tells us which routes serve each stop.
- *
- *   NLB stops use a separate numeric ID system and their coordinates are not
- *   pre-indexed — they are omitted from this proximity lookup.  NLB routes at
- *   KMB/CTB stops should be discovered through the cross-operator stop-all-eta
- *   query, which already handles NLB on shared physical stops via NLB_ROUTES_BY_STOP.
- *
- * GET /api/nearby-stops?lat=<number>&lng=<number>&radius=<meters>&excludeStopId=<id>
- *
- * Response:
- *   {
- *     stops: Array<{
- *       stopId: string;
- *       company: "KMB" | "MTRBUS";
- *       lat: number;
- *       lng: number;
- *       name_tc: string;
- *       name_en: string;
- *       dist: number;   // metres
- *     }>
- *   }
+ * hk-bus-crawling publishes a daily updated, cross-operator stop map with
+ * canonical stop coordinates. MTR Bus stop locations are maintained in the
+ * app because the MTR Bus ETA API does not provide a route/stop index.
  */
-
 import { NextRequest, NextResponse } from "next/server";
-import { MTR_BUS_STOP_LOCATIONS } from "@/shared/data/MTR_BUS_STOP_LOCATIONS";
 import { MTR_BUS_ROUTES_BY_STOP } from "@/shared/data/MTR_BUS_ROUTES_BY_STOP";
+import { MTR_BUS_STOP_LOCATIONS } from "@/shared/data/MTR_BUS_STOP_LOCATIONS";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
 
-const KMB_STOP_LIST_URL =
-  "https://data.etabus.gov.hk/v1/transport/kmb/stop-list";
+const HKBUS_FEED_URL =
+  "https://hkbus.github.io/hk-bus-crawling/routeFareList.min.json";
+const HKBUS_REFRESH_MS = 60 * 60 * 1000;
+const SUPPORTED_COMPANIES = ["kmb", "ctb", "nlb"] as const;
 
-// Haversine distance in metres between two lat/lng points
+type HkBusCompany = (typeof SUPPORTED_COMPANIES)[number];
+type CompanyName = "KMB" | "CTB" | "NLB" | "MTRBUS";
+
+interface FeedStop {
+  location?: { lat?: number | string; lng?: number | string };
+  name?: { en?: string; zh?: string };
+}
+
+interface FeedRoute {
+  co?: string[];
+  route?: string;
+  bound?: Partial<Record<HkBusCompany, string>>;
+  dest?: { en?: string; zh?: string };
+  orig?: { en?: string; zh?: string };
+  serviceType?: string | number;
+  nlbId?: string | number | null;
+  stops?: Partial<Record<HkBusCompany, string[]>>;
+}
+
+interface HkBusFeed {
+  routeList?: Record<string, FeedRoute>;
+  stopList?: Record<string, FeedStop>;
+  stopMap?: Record<string, [string, string][]>;
+}
+
+interface NearbyRoute {
+  route: string;
+  company: CompanyName;
+  dir: "I" | "O";
+  dest_tc: string;
+  dest_en: string;
+  routeId?: string;
+  serviceType?: string;
+}
+
+interface NearbyStop {
+  stopId: string;
+  company: CompanyName;
+  lat: number;
+  lng: number;
+  name_tc: string;
+  name_en: string;
+  dist: number;
+  routes: NearbyRoute[];
+}
+
+interface TransitIndex {
+  feed: Required<Pick<HkBusFeed, "routeList" | "stopList" | "stopMap">>;
+  routesByStop: Map<string, NearbyRoute[]>;
+}
+
+let cachedIndex: { expiresAt: number; index: TransitIndex } | undefined;
+let indexRequest: Promise<TransitIndex> | undefined;
+
+function companyName(company: HkBusCompany): Exclude<CompanyName, "MTRBUS"> {
+  return company.toUpperCase() as Exclude<CompanyName, "MTRBUS">;
+}
+
+function buildTransitIndex(feed: HkBusFeed): TransitIndex {
+  if (!feed.routeList || !feed.stopList || !feed.stopMap) {
+    throw new Error("hk-bus-crawling feed is missing route or stop data");
+  }
+
+  const routesByStop = new Map<string, NearbyRoute[]>();
+  for (const route of Object.values(feed.routeList)) {
+    if (!route.route || !route.co || !route.stops) continue;
+
+    for (const company of SUPPORTED_COMPANIES) {
+      if (!route.co.includes(company)) continue;
+      const routeStops = route.stops[company] ?? [];
+      const dir = route.bound?.[company] === "I" ? "I" : "O";
+      const routeInfo: NearbyRoute = {
+        route: route.route,
+        company: companyName(company),
+        dir,
+        dest_tc: route.dest?.zh ?? "",
+        dest_en: route.dest?.en ?? "",
+        ...(company === "nlb" && route.nlbId != null
+          ? { routeId: String(route.nlbId) }
+          : {}),
+        ...(company === "kmb"
+          ? { serviceType: String(route.serviceType ?? "1") }
+          : {}),
+      };
+
+      for (const stopId of routeStops) {
+        const key = `${company}:${stopId}`;
+        const routes = routesByStop.get(key) ?? [];
+        routes.push(routeInfo);
+        routesByStop.set(key, routes);
+      }
+    }
+  }
+
+  return {
+    feed: {
+      routeList: feed.routeList,
+      stopList: feed.stopList,
+      stopMap: feed.stopMap,
+    },
+    routesByStop,
+  };
+}
+
+async function getTransitIndex(): Promise<TransitIndex> {
+  if (cachedIndex && cachedIndex.expiresAt > Date.now()) {
+    return cachedIndex.index;
+  }
+
+  if (!indexRequest) {
+    indexRequest = (async () => {
+      const response = await fetch(HKBUS_FEED_URL, {
+        next: { revalidate: 3600 },
+      });
+      if (!response.ok) {
+        throw new Error(`hk-bus-crawling returned ${response.status}`);
+      }
+      const index = buildTransitIndex((await response.json()) as HkBusFeed);
+      cachedIndex = { expiresAt: Date.now() + HKBUS_REFRESH_MS, index };
+      return index;
+    })();
+  }
+
+  try {
+    return await indexRequest;
+  } finally {
+    indexRequest = undefined;
+  }
+}
+
 function haversineM(
   lat1: number,
   lng1: number,
   lat2: number,
   lng2: number,
 ): number {
-  const R = 6_371_000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
+  const radius = 6_371_000;
+  const toRad = (degrees: number) => (degrees * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-// Degree-based bounding box pre-filter (fast, no trig)
-function inBounds(
-  lat: number,
-  lng: number,
-  targetLat: number,
-  targetLng: number,
-  radiusM: number,
-): boolean {
-  const latDelta = radiusM / 111_000;
-  const lngDelta = radiusM / (111_000 * Math.cos((targetLat * Math.PI) / 180));
-  return (
-    Math.abs(lat - targetLat) <= latDelta &&
-    Math.abs(lng - targetLng) <= lngDelta
-  );
-}
-
-interface NearbyStop {
-  stopId: string;
-  company: "KMB" | "MTRBUS";
-  lat: number;
-  lng: number;
-  name_tc: string;
-  name_en: string;
-  dist: number;
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export async function GET(req: NextRequest) {
@@ -91,96 +169,110 @@ export async function GET(req: NextRequest) {
   const lngStr = searchParams.get("lng");
   const radiusStr = searchParams.get("radius");
   const excludeStopId = searchParams.get("excludeStopId") ?? "";
+  const excludeCompany = (searchParams.get("excludeCompany") ?? "").toLowerCase();
 
   if (!latStr || !lngStr) {
     return NextResponse.json({ error: "Missing lat/lng" }, { status: 400 });
   }
 
-  const targetLat = parseFloat(latStr);
-  const targetLng = parseFloat(lngStr);
-  const radius = Math.min(parseFloat(radiusStr ?? "80"), 200); // cap at 200m
-
-  if (isNaN(targetLat) || isNaN(targetLng) || isNaN(radius)) {
-    return NextResponse.json({ error: "Invalid lat/lng/radius" }, { status: 400 });
+  const targetLat = Number(latStr);
+  const targetLng = Number(lngStr);
+  const requestedRadius = radiusStr === null ? 80 : Number(radiusStr);
+  if (
+    !Number.isFinite(targetLat) ||
+    !Number.isFinite(targetLng) ||
+    !Number.isFinite(requestedRadius) ||
+    Math.abs(targetLat) > 90 ||
+    Math.abs(targetLng) > 180 ||
+    requestedRadius <= 0
+  ) {
+    return NextResponse.json(
+      { error: "Invalid lat/lng/radius" },
+      { status: 400 },
+    );
   }
 
-  const results: NearbyStop[] = [];
+  const radius = Math.min(requestedRadius, 200);
 
-  // ── 1. KMB stops (bulk list, shared with CTB) ──────────────────
   try {
-    const res = await fetch(KMB_STOP_LIST_URL, {
-      next: { revalidate: 86_400 }, // cache 24 hours — stops are static
-    });
-    if (res.ok) {
-      const json = await res.json();
-      type KmbStop = {
-        stop: string;
-        name_tc: string;
-        name_en: string;
-        lat: string;
-        long: string;
-      };
-      const stopList: KmbStop[] = (json.data ?? []) as KmbStop[];
+    const { feed, routesByStop } = await getTransitIndex();
+    const results: NearbyStop[] = [];
 
-      for (const s of stopList) {
-        if (s.stop === excludeStopId) continue;
-        const lat = parseFloat(s.lat);
-        const lng = parseFloat(s.long);
-        if (isNaN(lat) || isNaN(lng)) continue;
+    for (const [physicalStopId, stop] of Object.entries(feed.stopList)) {
+      const lat = Number(stop.location?.lat);
+      const lng = Number(stop.location?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
-        // Fast bounding-box pre-filter
-        if (!inBounds(lat, lng, targetLat, targetLng, radius)) continue;
+      const dist = haversineM(targetLat, targetLng, lat, lng);
+      if (dist > radius) continue;
 
-        const dist = haversineM(targetLat, targetLng, lat, lng);
-        if (dist <= radius) {
-          results.push({
-            stopId: s.stop,
-            company: "KMB",
-            lat,
-            lng,
-            name_tc: s.name_tc,
-            name_en: s.name_en,
-            dist,
-          });
+      for (const [rawCompany, stopId] of feed.stopMap[physicalStopId] ?? []) {
+        if (!(SUPPORTED_COMPANIES as readonly string[]).includes(rawCompany)) {
+          continue;
         }
+        if (rawCompany === excludeCompany && stopId === excludeStopId) continue;
+
+        const company = rawCompany as HkBusCompany;
+        const routes =
+          routesByStop.get(`${company}:${stopId}`) ?? [];
+        if (routes.length === 0) continue;
+
+        results.push({
+          stopId,
+          company: companyName(company),
+          lat,
+          lng,
+          name_tc: stop.name?.zh ?? stopId,
+          name_en: stop.name?.en ?? stopId,
+          dist,
+          routes,
+        });
       }
     }
-  } catch {
-    // non-fatal — skip KMB stops on upstream error
-  }
 
-  // ── 2. MTR Bus stops (static coordinate map) ───────────────────
-  for (const [busStopId, coords] of Object.entries(MTR_BUS_STOP_LOCATIONS)) {
-    if (busStopId === excludeStopId) continue;
-    if (!inBounds(coords.lat, coords.lng, targetLat, targetLng, radius)) continue;
+    for (const [stopId, location] of Object.entries(MTR_BUS_STOP_LOCATIONS)) {
+      if (excludeCompany === "mtrbus" && stopId === excludeStopId) continue;
 
-    const dist = haversineM(targetLat, targetLng, coords.lat, coords.lng);
-    if (dist <= radius) {
-      // Only include if there are routes at this stop
-      if (!(MTR_BUS_ROUTES_BY_STOP[busStopId]?.length > 0)) continue;
+      const dist = haversineM(
+        targetLat,
+        targetLng,
+        location.lat,
+        location.lng,
+      );
+      if (dist > radius) continue;
 
-      const names = MTR_BUS_STOP_NAMES[busStopId];
+      const routeNames = MTR_BUS_ROUTES_BY_STOP[stopId] ?? [];
+      if (routeNames.length === 0) continue;
+
+      const names = MTR_BUS_STOP_NAMES[stopId];
       results.push({
-        stopId: busStopId,
+        stopId,
         company: "MTRBUS",
-        lat: coords.lat,
-        lng: coords.lng,
-        name_tc: names?.zh ?? busStopId,
-        name_en: names?.en ?? busStopId,
+        lat: location.lat,
+        lng: location.lng,
+        name_tc: names?.zh ?? stopId,
+        name_en: names?.en ?? stopId,
         dist,
+        routes: routeNames.map((route) => ({
+          route,
+          company: "MTRBUS",
+          dir: "O",
+          dest_tc: route,
+          dest_en: route,
+        })),
       });
     }
+
+    results.sort((a, b) => a.dist - b.dist);
+    return NextResponse.json(
+      { stops: results },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    console.error("[/api/nearby-stops] lookup failed:", error);
+    return NextResponse.json(
+      { error: "Cross-operator stop data is unavailable" },
+      { status: 502 },
+    );
   }
-
-  // Sort by distance
-  results.sort((a, b) => a.dist - b.dist);
-
-  return NextResponse.json(
-    { stops: results },
-    {
-      headers: {
-        "Cache-Control": "no-store",
-      },
-    },
-  );
 }

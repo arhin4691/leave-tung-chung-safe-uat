@@ -7,6 +7,7 @@ import { Grid } from "@mui/material";
 import { UpdateContext } from "@/shared/context/update-context";
 import Card from "../../ui/Card";
 import { useLocale } from "@/shared/context/locale-context";
+import StopMap from "@/shared/components/ui/StopMap";
 
 interface BackRoutesYellowStopModalProps {
   onClose: () => void;
@@ -155,15 +156,7 @@ const BackRoutesYellowStopModal: React.FC<BackRoutesYellowStopModalProps> = (pro
 
   const map = (
     <Card disabled classNames="p-1">
-      <iframe
-        width="100%"
-        height="150px"
-        frameBorder="0"
-        marginHeight={0}
-        marginWidth={0}
-        src={`//maps.google.com/maps?q=${props.lat},${props.long}&z=15&output=embed`}
-        style={{ borderRadius: "10px", width: "100%", overflow: "hidden" }}
-      ></iframe>
+      <StopMap lat={props.lat} long={props.long} title={props.stop ?? "Bus stop"} />
     </Card>
   );
 

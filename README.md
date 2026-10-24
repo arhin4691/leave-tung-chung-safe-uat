@@ -1,38 +1,31 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Leave Tung Chung Safe
 
-## Getting Started
+A mobile-first Next.js app for checking Hong Kong bus routes, stop ETAs,
+favourites, MTR services, and road traffic notices.
 
-First, run the development server:
+## Transit data
+
+- KMB, Citybus (CTB), and NLB route and ETA data use the operators' public
+  Data.gov.hk APIs. The matching API specifications are in [`api_docs/`](./api_docs/).
+- Cross-operator stop matching uses the daily-updated
+  [hkbus/hk-bus-crawling](https://github.com/hkbus/hk-bus-crawling) feed. It
+  groups KMB, CTB, and NLB stop IDs by physical location and supplies the
+  associated route metadata. The app refreshes this feed hourly.
+- MTR Bus ETAs use the MTR Bus `getSchedule` API. Its route list and stop
+  locations come from the maintained data in [`shared/data/`](./shared/data/),
+  as the ETA API does not offer a route-list endpoint.
+- Stop maps are embedded from OpenStreetMap and recenter on the selected stop.
+
+This app uses and attributes HK Bus Crawling data:
+[HK Bus Crawling](https://github.com/hkbus/hk-bus-crawling).
+
+## Development
+
+Install dependencies and start the dev server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
-
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
-
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
-
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Run a production build with `npm run build`.

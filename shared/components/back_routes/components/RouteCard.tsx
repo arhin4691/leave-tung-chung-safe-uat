@@ -25,6 +25,7 @@ import type {
 } from "@/shared/types";
 import { toggleFavStop, isFavStop, getFavStops } from "@/shared/util/favStops";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
+import { MTR_BUS_STOP_LOCATIONS } from "@/shared/data/MTR_BUS_STOP_LOCATIONS";
 import { useLocale } from "@/shared/context/locale-context";
 
 const ETA_POLL_MS = 15_000;
@@ -38,6 +39,7 @@ const CO_PILL: Record<string, { bg: string; label: string; text: string }> = {
 
 interface RouteCardProps {
   entry: BusRouteEntry;
+  initialStopId?: string;
 }
 
 // ?? KMB / CTB / NLB stop loading ????????????????????????????????
@@ -203,12 +205,17 @@ async function fetchMtrBusSchedule(
     return `站 ${seq} (${code})`;
   }
 
-  const stops: NormalisedStop[] = busStops.map((s, i) => ({
-    id: s.busStopId,
-    name_tc: fmtStopName(s.busStopId, i + 1),
-    name_en: fmtStopName(s.busStopId, i + 1),
-    seq: i + 1,
-  }));
+  const stops: NormalisedStop[] = busStops.map((s, i) => {
+    const location = MTR_BUS_STOP_LOCATIONS[s.busStopId];
+    return {
+      id: s.busStopId,
+      name_tc: fmtStopName(s.busStopId, i + 1),
+      name_en: fmtStopName(s.busStopId, i + 1),
+      lat: location?.lat.toString(),
+      long: location?.lng.toString(),
+      seq: i + 1,
+    };
+  });
 
   const etas: Record<string, RouteEtaItem[]> = {};
   for (const s of busStops) {
@@ -254,7 +261,7 @@ async function fetchMtrBusSchedule(
 
 // ?? Component ?????????????????????????????????????????????????????
 
-const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
+const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [stops, setStops] = useState<NormalisedStop[]>([]);
@@ -275,6 +282,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stopsLoaded = useRef(false);
+  const handledInitialStop = useRef<string | null>(null);
 
   // Live clock ??ticks every second
   useEffect(() => {
@@ -342,6 +350,29 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry }) => {
       loadStops();
     }
   }, [open, loadStops]);
+
+  useEffect(() => {
+    if (initialStopId) setOpen(true);
+  }, [initialStopId]);
+
+  useEffect(() => {
+    if (!initialStopId || handledInitialStop.current === initialStopId) return;
+    const stop = stops.find((item) => item.id === initialStopId);
+    if (!stop) return;
+
+    setSelectedStop({
+      stopId: stop.id,
+      name_tc: stop.name_tc,
+      name_en: stop.name_en,
+      lat: stop.lat,
+      long: stop.long,
+      etas: etas[stop.id] ?? [],
+      company: entry.company,
+      route: entry.route,
+      dest_tc: entry.dest_tc,
+    });
+    handledInitialStop.current = initialStopId;
+  }, [entry, etas, initialStopId, stops]);
 
   useEffect(() => {
     if (open && stops.length > 0) {

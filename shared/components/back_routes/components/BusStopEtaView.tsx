@@ -6,6 +6,7 @@ import BusEtaRouteCard from "./BusEtaRouteCard";
 import type { StopEtaRow, StopEtaSlot, EtaEntry } from "@/shared/types";
 import { useLocale } from "@/shared/context/locale-context";
 import type { TranslationKey } from "@/shared/i18n/translations";
+import StopMap from "@/shared/components/ui/StopMap";
 
 interface BusStopEtaViewProps {
   /** KMB or CTB stop ID */
@@ -63,50 +64,105 @@ const RefreshIcon = () => (
   </svg>
 );
 
-const MapPinIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
-
 const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
   const { t } = useLocale();
   const [rows, setRows] = useState<StopEtaRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  const [now, setNow] = useState(0); // 0 on both server and client — avoids hydration mismatch
   const [filter, setFilter] = useState<CompanyFilter>("ALL");
   const [countdown, setCountdown] = useState(REFRESH_SEC);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Nearby KMB stop IDs discovered via proximity lookup.
+  // Populated once on mount; reused on every ETA refresh.
+  const nearbyKmbIdsRef = useRef<string[]>([]);
+
+  // ── One-time proximity lookup ────────────────────────────────
+  // In Hong Kong, KMB and CTB sometimes register separate stop IDs for
+  // the same physical pole. A direct KMB query with a CTB stop ID would
+  // miss those KMB routes. We search within 80 m at mount time and cache
+  // the discovered KMB stop IDs for inclusion in every ETA refresh.
+  useEffect(() => {
+    if (
+      props.company !== "ctb" || // only needed for CTB — KMB already gives full cross-operator data
+      !props.stopId ||
+      !props.lat ||
+      !props.long
+    )
+      return;
+
+    fetch(
+      `/api/nearby-stops?lat=${props.lat}&lng=${props.long}&excludeStopId=${encodeURIComponent(props.stopId)}`
+    )
+      .then((r) => (r.ok ? r.json() : { stops: [] }))
+      .then((j) => {
+        const kmbIds = (j.stops ?? [])
+          .filter((s: { company: string }) => s.company === "KMB")
+          .map((s: { stopId: string }) => s.stopId);
+        if (kmbIds.length > 0) {
+          nearbyKmbIdsRef.current = kmbIds;
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.stopId, props.lat, props.long]);
+
   const fetchEtas = useCallback(async () => {
     if (props.company === "nlb" || !props.stopId) return;
     setIsLoading(true);
     try {
-      const res = await fetch(
-        `/api/stop-all-eta?stopId=${encodeURIComponent(props.stopId)}&company=${props.company}`,
-        { cache: "no-store" }
+      // KMB and CTB share the same stop ID registry — always fetch both
+      // regardless of which operator opened this view.
+      const targets: string[] =
+        props.company === "kmb" || props.company === "ctb"
+          ? ["kmb", "ctb"]
+          : [props.company];
+
+      // Direct queries for this stop ID
+      const directFetches = targets.map((co) =>
+        fetch(
+          `/api/stop-all-eta?stopId=${encodeURIComponent(props.stopId!)}&company=${co}`,
+          { cache: "no-store" }
+        )
+          .then((r) => (r.ok ? r.json() : { rows: [] }))
+          .catch(() => ({ rows: [] }))
       );
-      if (res.ok) {
-        const json = await res.json();
-        setRows(json.rows ?? []);
-        setLastRefresh(new Date());
-        setNow(Math.floor(Date.now() / 1000));
-        setCountdown(REFRESH_SEC);
-      }
+
+      // Proximity queries — fetch KMB+CTB for each nearby KMB stop ID.
+      // These handle the case where the CTB pole has a different stop ID
+      // than the adjacent KMB pole at the same physical location.
+      const nearbyFetches = nearbyKmbIdsRef.current.flatMap((sid) =>
+        ["kmb", "ctb"].map((co) =>
+          fetch(
+            `/api/stop-all-eta?stopId=${encodeURIComponent(sid)}&company=${co}`,
+            { cache: "no-store" }
+          )
+            .then((r) => (r.ok ? r.json() : { rows: [] }))
+            .catch(() => ({ rows: [] }))
+        )
+      );
+
+      const allResponses = await Promise.all([...directFetches, ...nearbyFetches]);
+
+      // Merge + deduplicate by (co|route|dir)
+      const seen = new Set<string>();
+      const merged: StopEtaRow[] = allResponses
+        .flatMap((json: { rows?: StopEtaRow[] }) => json.rows ?? [])
+        .filter((row: StopEtaRow) => {
+          const key = `${row.co}|${row.route}|${row.dir}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+      setRows(merged);
+      setLastRefresh(new Date());
+      setNow(Math.floor(Date.now() / 1000));
+      setCountdown(REFRESH_SEC);
     } catch {
       // silent — keep stale data
     } finally {
@@ -117,6 +173,9 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
 
   // Initial fetch + auto-refresh
   useEffect(() => {
+    // Initialize clock on client to avoid hydration mismatch (now starts at 0)
+    setNow(Math.floor(Date.now() / 1000));
+
     fetchEtas();
 
     timerRef.current = setInterval(() => {
@@ -181,12 +240,6 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
     })),
   };
 
-  // ── Map link ─────────────────────────────────────────────────
-  const mapUrl =
-    props.lat && props.long
-      ? `https://www.google.com/maps?q=${props.lat},${props.long}&z=17`
-      : null;
-
   // ── Last-refresh label ────────────────────────────────────────
   const refreshLabel = lastRefresh
     ? `${t("bus.updatedAt")} ${lastRefresh.toLocaleTimeString("zh-HK", {
@@ -208,18 +261,6 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
           )}
         </div>
         <div className="eta-stop-actions">
-          {mapUrl && (
-            <a
-              href={mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="eta-map-btn"
-              aria-label={t("bus.viewOnMap")}
-            >
-              <MapPinIcon />
-              {t("bus.mapBtn")}
-            </a>
-          )}
           <button
             className={`eta-refresh-btn${isLoading ? " eta-refresh-spinning" : ""}`}
             onClick={handleRefresh}
@@ -231,6 +272,8 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
           </button>
         </div>
       </div>
+
+      <StopMap lat={props.lat} long={props.long} title={props.stopNameTc} />
 
       {/* ── Countdown / last-refresh bar ───────────────────── */}
       <div className="eta-refresh-bar">

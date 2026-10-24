@@ -23,13 +23,16 @@ interface BackRoutesItemsYellowStopProps {
 const BackRoutesItemsYellowStop: React.FC<BackRoutesItemsYellowStopProps> = (props) => {
   const { t } = useLocale();
   const [modal, setModal] = useState<boolean>(false);
-  const [now, setNow] = useState<number>(Math.floor(Date.now() / 1000));
+  // 0 as initial value matches server render — avoids hydration mismatch.
+  // useEffect sets the real clock value on the client only.
+  const [now, setNow] = useState<number>(0);
   const [eta, setEta] = useState<any[]>([]);
   const [locate, setLocate] = useState<any>({});
 
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
+    setNow(Math.floor(Date.now() / 1000)); // client-only init
     const fetchAll = async () => {
       try {
         const [etaRes, locateRes, stopsRes] = await Promise.all([
@@ -94,7 +97,7 @@ const BackRoutesItemsYellowStop: React.FC<BackRoutesItemsYellowStopProps> = (pro
             </span>
           </div>
         </Grid>
-        {etaEntry?.eta !== "" ? (
+        {etaEntry?.eta !== "" && now > 0 ? (
           <Grid item xs={4}>
             {Math.floor(
               (Date.parse(etaEntry?.eta[0]?.timestamp) / 1000 - now) / 60

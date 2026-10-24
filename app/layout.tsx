@@ -5,6 +5,7 @@ import ToastProvider from "@/shared/components/ui/ToastProvider";
 import { ThemeProvider } from "@/shared/context/theme-context";
 import { LocaleProvider } from "@/shared/context/locale-context";
 import "@/styles/globals.css";
+import "leaflet/dist/leaflet.css";
 
 export const metadata: Metadata = {
   title: "東涌出行",

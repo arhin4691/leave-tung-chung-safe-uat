@@ -360,5 +360,6 @@ export interface StopEtaRow {
   dest_tc: string;
   dest_en: string;
   etas: StopEtaSlot[];
+  routeId?: string;
+  serviceType?: string;
 }
-

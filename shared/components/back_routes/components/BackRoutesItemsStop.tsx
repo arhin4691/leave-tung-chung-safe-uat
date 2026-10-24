@@ -16,7 +16,9 @@ interface BackRoutesItemsStopProps {
 const BackRoutesItemsStop: React.FC<BackRoutesItemsStopProps> = (props) => {
   const { t } = useLocale();
   const [eta, setEta] = useState<any[]>([{ eta: "" }]);
-  const [now, setNow] = useState<number>(Math.floor(Date.now() / 1000));
+  // 0 as initial value matches server render — avoids hydration mismatch.
+  // useEffect sets the real clock value on the client only.
+  const [now, setNow] = useState<number>(0);
 
   const getEta = async () => {
     const data = await fetch(
@@ -28,6 +30,7 @@ const BackRoutesItemsStop: React.FC<BackRoutesItemsStopProps> = (props) => {
 
   useEffect(() => {
     if (props.stop) {
+      setNow(Math.floor(Date.now() / 1000)); // client-only init
       getEta();
       const interval = setInterval(() => {
         getEta();
@@ -78,7 +81,7 @@ const BackRoutesItemsStop: React.FC<BackRoutesItemsStopProps> = (props) => {
             </span>
           </div>
         </Grid>
-        {eta[0].eta !== "" ? (
+        {eta[0].eta !== "" && now > 0 ? (
           <Grid item xs={4}>
             {Math.floor((Date.parse(eta[0].eta) / 1000 - now) / 60) <= 0 ? (
               <span className={`badge-success-animate center ${props.site === "fav" ? "display-7 p-1" : "display-75"}`}>

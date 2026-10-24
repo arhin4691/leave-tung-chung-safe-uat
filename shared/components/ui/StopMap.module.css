@@ -1,0 +1,53 @@
+.mapFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 220px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mapCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mapLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 2px 0;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11px;
+}
+
+.legendMarker {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.stopMarker {
+  background: #e53935;
+}
+
+.userMarker {
+  background: #1683ff;
+}
+
+.mapStatus {
+  padding: 6px 2px 0;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+}

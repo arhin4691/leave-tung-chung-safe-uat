@@ -28,6 +28,7 @@ import RouteCard from "./components/RouteCard";
 import RouteKeyboard from "@/shared/components/ui/RouteKeyboard";
 import type { BusRouteEntry, KmbRoute, CtbRoute, NlbRoute } from "@/shared/types";
 import { useLocale } from "@/shared/context/locale-context";
+import { MTR_BUS_ROUTES_BY_STOP } from "@/shared/data/MTR_BUS_ROUTES_BY_STOP";
 
 interface BusPageClientProps {
   kmbData: KmbRoute[];
@@ -100,22 +101,11 @@ function nlbToEntries(routes: NlbRoute[]): BusRouteEntry[] {
   }));
 }
 
-// MTR Bus routes (static — per MTR_BUS_API_Spec_v1.13 / MTR_BUS_DataDictionary_v1.19)
+// MTR Bus has no route-list endpoint; derive current routes from the maintained
+// stop-to-route dataset instead of duplicating a route list in the UI.
 const MTR_BUS_ROUTE_NAMES = [
-  "506",
-  "K12", "K14", "K17", "K18",
-  "K51", "K51A",
-  "K52", "K52A", "K52LR", "K52P",
-  "K53", "K53S",
-  "K54", "K54A",
-  "K58",
-  "K65", "K65A",
-  "K66",
-  "K68", "K68S",
-  "K73", "K74",
-  "K75A", "K75P", "K75S",
-  "K76", "K76S",
-] as const;
+  ...new Set(Object.values(MTR_BUS_ROUTES_BY_STOP).flat()),
+].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
 function mtrBusToEntries(): BusRouteEntry[] {
   return MTR_BUS_ROUTE_NAMES.map((routeName) => ({
@@ -146,6 +136,14 @@ function matchesSearch(entry: BusRouteEntry, q: string): boolean {
 
 const INITIAL_SHOW = 30;
 const LOAD_MORE_STEP = 30;
+
+interface RouteTarget {
+  company: BusRouteEntry["company"];
+  route: string;
+  dir: BusRouteEntry["dir"];
+  stopId: string;
+  routeId?: string;
+}
 
 const SearchIcon = () => (
   <svg
@@ -189,6 +187,7 @@ const BusPageClient: React.FC<BusPageClientProps> = ({
   const [keyword, setKeyword] = useState("");
   const deferred = useDeferredValue(keyword);
   const [shown, setShown] = useState(INITIAL_SHOW);
+  const [routeTarget, setRouteTarget] = useState<RouteTarget | null>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -216,6 +215,34 @@ const BusPageClient: React.FC<BusPageClientProps> = ({
     ],
     [kmbData, ctbData, nlbData],
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const route = params.get("route");
+    const stopId = params.get("stopId");
+    const company = params.get("company");
+    if (!route || !stopId || !company) return;
+
+    const target = allRoutes.find(
+      (entry) =>
+        entry.company === company &&
+        entry.route === route &&
+        entry.dir === (params.get("dir") ?? "O") &&
+        (!params.get("routeId") ||
+          String(entry.routeId) === params.get("routeId")),
+    );
+    if (!target) return;
+
+    setCompany(target.company);
+    setKeyword(target.route);
+    setRouteTarget({
+      company: target.company,
+      route: target.route,
+      dir: target.dir,
+      stopId,
+      routeId: target.routeId,
+    });
+  }, [allRoutes]);
 
   /**
    * Deduplicated route numbers for the current company filter.
@@ -404,7 +431,19 @@ const BusPageClient: React.FC<BusPageClientProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(i, 8) * 0.03 }}
             >
-              <RouteCard entry={entry} />
+              <RouteCard
+                entry={entry}
+                initialStopId={
+                  routeTarget &&
+                  entry.company === routeTarget.company &&
+                  entry.route === routeTarget.route &&
+                  entry.dir === routeTarget.dir &&
+                  (!routeTarget.routeId ||
+                    String(entry.routeId) === routeTarget.routeId)
+                    ? routeTarget.stopId
+                    : undefined
+                }
+              />
             </motion.div>
           ))}
         </AnimatePresence>

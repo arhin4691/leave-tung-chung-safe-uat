@@ -21,10 +21,12 @@ const BackRoutesItemsNLBStop: React.FC<BackRoutesItemsNLBStopProps> = (props) =>
   const { t } = useLocale();
   // Use parent-supplied ETA; keep a local clock for countdown labels
   const eta: any[] = props.eta ?? [];
-  const [now, setNow] = useState<number>(Math.floor(Date.now() / 1000));
+  // 0 as initial value matches server render — avoids hydration mismatch.
+  const [now, setNow] = useState<number>(0);
   const [modal, setModal] = useState<boolean>(false);
 
   useEffect(() => {
+    setNow(Math.floor(Date.now() / 1000)); // client-only init
     const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
     return () => clearInterval(t);
   }, []);
@@ -55,7 +57,7 @@ const BackRoutesItemsNLBStop: React.FC<BackRoutesItemsNLBStopProps> = (props) =>
             </span>
           </div>
         </Grid>
-        {eta.length > 0 && eta[0].estimatedArrivalTime ? (
+        {eta.length > 0 && eta[0].estimatedArrivalTime && now > 0 ? (
           <Grid item xs={4}>
             {Math.floor((Date.parse(eta[0].estimatedArrivalTime) / 1000 - now) / 60) <= 0 ? (
               <span className={`badge-success-animate center ${props.site === "fav" ? "p-1 display-7" : "display-75"}`}>

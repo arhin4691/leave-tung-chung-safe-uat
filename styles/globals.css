@@ -664,6 +664,52 @@ a:hover {
   }
 }
 
+/* ================================================================
+   Light-mode badge contrast overrides
+   Yellow / amber / orange badges fall below WCAG AA on bright
+   backgrounds.  These rules deepen the fill, darken the text, and
+   add a crisp border so the badge shape is always clearly defined.
+   ================================================================ */
+
+/* Pulse animation variant for light mode (uses dark-amber glow) */
+@keyframes pulseYellowLight {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(130, 70, 0, 0.50);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(130, 70, 0, 0);
+  }
+}
+
+/* ETA countdown badge: "≤ 5 min" warning state */
+[data-theme="light"] .badge-warning {
+  background: rgba(205, 130, 0, 0.20);
+  color: #5a3200;
+  border: 1px solid rgba(110, 60, 0, 0.32);
+}
+
+[data-theme="light"] .badge-warning-animate {
+  background: rgba(205, 130, 0, 0.20);
+  color: #5a3200;
+  border: 1px solid rgba(110, 60, 0, 0.32);
+  animation: pulseYellowLight 1.8s ease-in-out infinite;
+}
+
+/* CTB operator badge (amber/orange branding) */
+[data-theme="light"] .badge-ctb {
+  background: rgba(190, 100, 0, 0.18);
+  color: #4a2000;
+  border: 1px solid rgba(110, 55, 0, 0.30);
+}
+
+/* CTB green label used in BusEtaRouteCard / BackRoutesModal */
+[data-theme="light"] .badge-ctb-green {
+  background: rgba(190, 100, 0, 0.16);
+  color: #4a2000;
+  border: 1px solid rgba(110, 55, 0, 0.28);
+}
+
 table {
   width: 100%;
   border-collapse: separate;
@@ -812,30 +858,6 @@ table td {
   gap: 6px;
   flex-shrink: 0;
   padding-top: 2px;
-}
-
-.eta-map-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  border-radius: var(--radius-full);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  color: var(--accent-blue);
-  font-size: 12px;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    background 0.18s,
-    border-color 0.18s;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.eta-map-btn:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-hover);
-  opacity: 1;
 }
 
 .eta-refresh-btn {

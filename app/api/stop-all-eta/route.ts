@@ -66,11 +66,19 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const stopId = searchParams.get("stopId");
   const company = searchParams.get("company");
+  const routeIdsParam = searchParams.get("routeIds");
 
   if (!stopId || !company) {
     return NextResponse.json(
       { error: "Missing stopId or company" },
       { status: 400 }
+    );
+  }
+
+  if (!["kmb", "ctb", "nlb"].includes(company)) {
+    return NextResponse.json(
+      { error: "Unsupported company" },
+      { status: 400 },
     );
   }
 
@@ -97,7 +105,15 @@ export async function GET(req: NextRequest) {
     } else if (company === "nlb") {
       // Use static reverse-stop lookup to find all NLB routes at this stop,
       // then fetch live ETAs for each route in parallel.
-      const routeIds = (NLB_ROUTES_BY_STOP[stopId] ?? []).slice(0, 8); // cap at 8
+      const routeIds = routeIdsParam
+        ? [
+            ...new Set(
+              routeIdsParam
+                .split(",")
+                .filter((routeId) => NLB_ROUTE_INFO[routeId]),
+            ),
+          ].slice(0, 40)
+        : (NLB_ROUTES_BY_STOP[stopId] ?? []).slice(0, 40);
       const nlbRows: StopEtaRow[] = [];
 
       await Promise.all(
@@ -116,8 +132,6 @@ export async function GET(req: NextRequest) {
               destinationName_c: string;
               destinationName_e: string;
             }>;
-            if (arrivals.length === 0) return;
-
             const dest_tc =
               arrivals[0]?.destinationName_c ||
               routeData.name_c.split(" > ").pop() ||
@@ -131,6 +145,7 @@ export async function GET(req: NextRequest) {
               route: routeData.routeNo,
               co: "NLB",
               dir: "O",
+              routeId: rid,
               dest_tc,
               dest_en,
               etas: arrivals.slice(0, 3).map((a, i) => ({
@@ -163,9 +178,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ rows, timestamp: new Date().toISOString() });
   } catch (err) {
     console.error("stop-all-eta error:", err);
-    return NextResponse.json({
-      rows: [],
-      timestamp: new Date().toISOString(),
-    });
+    return NextResponse.json(
+    { error: "Bus ETA service is unavailable" },
+    { status: 502 },
+    );
   }
 }

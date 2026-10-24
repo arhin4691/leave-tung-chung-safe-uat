@@ -13,9 +13,12 @@
 import React, { memo, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import type { SelectedStopInfo, RouteEtaItem, StopEtaRow } from "@/shared/types";
 import { useLocale } from "@/shared/context/locale-context";
 import type { TranslationKey } from "@/shared/i18n/translations";
+import StopMap from "@/shared/components/ui/StopMap";
+import classes from "./BusStopModal.module.css";
 
 // ── Company branding ──────────────────────────────────────────────
 const CO_COLOR: Record<string, string> = {
@@ -232,16 +235,140 @@ interface BusStopModalProps {
   onNavigate?: (info: SelectedStopInfo) => void;
 }
 
+interface NearbyRoute {
+  route: string;
+  company: "KMB" | "CTB" | "NLB" | "MTRBUS";
+  dir: "I" | "O";
+  dest_tc: string;
+  dest_en: string;
+  routeId?: string;
+  serviceType?: string;
+}
+
+interface NearbyStop {
+  stopId: string;
+  company: "KMB" | "CTB" | "NLB" | "MTRBUS";
+  lat: number;
+  lng: number;
+  name_tc: string;
+  name_en: string;
+  routes: NearbyRoute[];
+}
+
+type OtherRoute = StopEtaRow & {
+  stopId: string;
+  lat?: string;
+  long?: string;
+  serviceType?: string;
+};
+
 const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopList, onNavigate }) => {
   const { t } = useLocale();
+  const router = useRouter();
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
-  const [otherRoutes, setOtherRoutes] = useState<StopEtaRow[]>([]);
-  const sheetRef = useRef<HTMLDivElement>(null);
+  const [otherRoutes, setOtherRoutes] = useState<OtherRoute[]>([]);
+  const [nearbyError, setNearbyError] = useState(false);
+  const slidesRef = useRef<HTMLDivElement>(null);
+  const [activeSection, setActiveSection] = useState(0);
 
-  // Reset scroll to top whenever the displayed stop changes
+  // Reset the pager and each panel's vertical scroll whenever the stop changes.
   useEffect(() => {
-    if (sheetRef.current) sheetRef.current.scrollTop = 0;
+    setActiveSection(0);
+    if (!slidesRef.current) return;
+    slidesRef.current.scrollLeft = 0;
+    slidesRef.current
+      .querySelectorAll<HTMLElement>("[data-stop-slide]")
+      .forEach((slide) => {
+        slide.scrollTop = 0;
+      });
   }, [info?.stopId]);
+
+  useEffect(() => {
+    const track = slidesRef.current;
+    if (!track) return;
+
+    let touchStart: { x: number; y: number; scrollLeft: number } | null = null;
+    let isHorizontalSwipe = false;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) {
+        touchStart = null;
+        isHorizontalSwipe = false;
+        return;
+      }
+
+      const touch = event.touches[0];
+      touchStart = {
+        x: touch.clientX,
+        y: touch.clientY,
+        scrollLeft: track.scrollLeft,
+      };
+      isHorizontalSwipe = false;
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!touchStart || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - touchStart.x;
+      const deltaY = touch.clientY - touchStart.y;
+
+      if (
+        !isHorizontalSwipe &&
+        Math.abs(deltaX) > 10 &&
+        Math.abs(deltaX) > Math.abs(deltaY)
+      ) {
+        isHorizontalSwipe = true;
+      }
+      if (!isHorizontalSwipe) return;
+
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+      track.scrollLeft = touchStart.scrollLeft - deltaX;
+    };
+
+    const finishTouch = () => {
+      if (isHorizontalSwipe && track.clientWidth > 0) {
+        const index = Math.max(
+          0,
+          Math.min(
+            2,
+            Math.round(track.scrollLeft / track.clientWidth),
+          ),
+        );
+        setActiveSection(index);
+        track.scrollTo({
+          left: index * track.clientWidth,
+          behavior: "smooth",
+        });
+      }
+      touchStart = null;
+      isHorizontalSwipe = false;
+    };
+
+    track.addEventListener("touchstart", handleTouchStart, {
+      capture: true,
+      passive: true,
+    });
+    track.addEventListener("touchmove", handleTouchMove, {
+      capture: true,
+      passive: false,
+    });
+    track.addEventListener("touchend", finishTouch, {
+      capture: true,
+      passive: true,
+    });
+    track.addEventListener("touchcancel", finishTouch, {
+      capture: true,
+      passive: true,
+    });
+
+    return () => {
+      track.removeEventListener("touchstart", handleTouchStart, true);
+      track.removeEventListener("touchmove", handleTouchMove, true);
+      track.removeEventListener("touchend", finishTouch, true);
+      track.removeEventListener("touchcancel", finishTouch, true);
+    };
+  }, []);
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -255,164 +382,131 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
     return () => clearInterval(t);
   }, []);
 
-  // Fetch other routes at the same stop.
-  //
-  // Layer 1 — same stop ID registry:
-  //   KMB and CTB share the same stop IDs, so querying both always works
-  //   regardless of which company the current stop belongs to.
-  //
-  // Layer 2 — NLB (own numeric IDs):
-  //   When viewing an NLB stop, also query the NLB stop-all-eta endpoint.
-  //
-  // Layer 3 — proximity cross-operator lookup (requires lat/long):
-  //   /api/nearby-stops returns KMB stop IDs and MTR Bus stop IDs within
-  //   ~80 m of the current stop coordinates.  This finds:
-  //     • KMB/CTB routes when viewing an NLB or MTR Bus stop
-  //     • MTR Bus routes when viewing any stop with coordinates
-  //   KMB stop IDs discovered this way ARE the same IDs used for CTB queries.
+  // Use the daily cross-operator stop map to find routes even when operators
+  // assign different IDs to the same physical stop.
   useEffect(() => {
     if (!info) return;
     setOtherRoutes([]);
+    setNearbyError(false);
     let cancelled = false;
-    const stopId = info.stopId;
-    const isNlb = info.company === "NLB";
-    const hasCoords = !!info.lat && !!info.long;
 
     async function load() {
       try {
-        // ── Layer 1+2: same-ID-registry queries ──────────────────
-        const sameIdFetches: Promise<StopEtaRow[]>[] = [
-          // KMB stop-all-eta
-          fetch(`/api/stop-all-eta?stopId=${encodeURIComponent(stopId)}&company=kmb`)
-            .then((r) => (r.ok ? r.json() : { rows: [] }))
-            .then((j) => (j.rows ?? []) as StopEtaRow[])
-            .catch(() => []),
-          // CTB stop-all-eta (same stop IDs as KMB)
-          fetch(`/api/stop-all-eta?stopId=${encodeURIComponent(stopId)}&company=ctb`)
-            .then((r) => (r.ok ? r.json() : { rows: [] }))
-            .then((j) => (j.rows ?? []) as StopEtaRow[])
-            .catch(() => []),
-        ];
-        if (isNlb) {
-          sameIdFetches.push(
-            fetch(`/api/stop-all-eta?stopId=${encodeURIComponent(stopId)}&company=nlb`)
-              .then((r) => (r.ok ? r.json() : { rows: [] }))
-              .then((j) => (j.rows ?? []) as StopEtaRow[])
-              .catch(() => []),
-          );
+        const company = info.company.toLowerCase();
+        const directRowsPromise: Promise<OtherRoute[]> =
+          company === "mtrbus"
+            ? Promise.resolve([])
+            : fetch(
+                `/api/stop-all-eta?stopId=${encodeURIComponent(info.stopId)}&company=${company}`,
+              )
+                .then((response) =>
+                  response.ok ? response.json() : { rows: [] },
+                )
+                .then((json) =>
+                  ((json.rows ?? []) as StopEtaRow[]).map((row) => ({
+                    ...row,
+                    stopId: info.stopId,
+                    lat: info.lat,
+                    long: info.long,
+                  })),
+                )
+                .catch(() => []);
+
+        const hasCoords = info.lat !== undefined && info.long !== undefined;
+        let nearbyStops: NearbyStop[] = [];
+        if (hasCoords) {
+          const params = new URLSearchParams({
+            lat: info.lat!,
+            lng: info.long!,
+            excludeStopId: info.stopId,
+            excludeCompany: info.company,
+          });
+          const response = await fetch(`/api/nearby-stops?${params}`);
+          if (!response.ok) {
+            throw new Error(`Nearby-stop lookup returned ${response.status}`);
+          }
+          const json = (await response.json()) as { stops?: NearbyStop[] };
+          nearbyStops = json.stops ?? [];
         }
 
-        // ── Layer 3: proximity lookup ──────────────────────────────
-        // Fetch in parallel with Layer 1+2
-        type NearbyStop = { stopId: string; company: "KMB" | "MTRBUS"; name_tc: string };
-        const nearbyFetch: Promise<NearbyStop[]> = hasCoords
-          ? fetch(
-              `/api/nearby-stops?lat=${info.lat}&lng=${info.long}&excludeStopId=${encodeURIComponent(stopId)}`,
-            )
-              .then((r) => (r.ok ? r.json() : { stops: [] }))
-              .then((j) => (j.stops ?? []) as NearbyStop[])
-              .catch(() => [])
-          : Promise.resolve([]);
-
-        const [sameIdRows, nearbyStops] = await Promise.all([
-          Promise.all(sameIdFetches).then((r) => r.flat()),
-          nearbyFetch,
-        ]);
-
-        if (cancelled) return;
-
-        // Deduplicate nearby stops by stopId+company; then fetch their ETAs
-        const nearbyKmbIds = [
-          ...new Set(
-            nearbyStops.filter((s) => s.company === "KMB").map((s) => s.stopId),
-          ),
-        ];
-        const nearbyMtrIds = [
-          ...new Set(
-            nearbyStops.filter((s) => s.company === "MTRBUS").map((s) => s.stopId),
-          ),
-        ];
-
-        // KMB stops found nearby → also valid for CTB (shared registry)
-        const nearbyKmbCtbFetches: Promise<StopEtaRow[]>[] = nearbyKmbIds.flatMap((sid) =>
-          ["kmb", "ctb"].map((co) =>
-            fetch(`/api/stop-all-eta?stopId=${encodeURIComponent(sid)}&company=${co}`)
-              .then((r) => (r.ok ? r.json() : { rows: [] }))
-              .then((j) => (j.rows ?? []) as StopEtaRow[])
-              .catch(() => []),
-          ),
-        );
-
-        // MTR Bus nearby stops — query their ETAs via mtr-bus-route
-        // Group by routeName so we only fetch each route once
-        const { MTR_BUS_ROUTES_BY_STOP } = await import("@/shared/data/MTR_BUS_ROUTES_BY_STOP");
-        const mtrRouteNames = [
-          ...new Set(nearbyMtrIds.flatMap((sid) => MTR_BUS_ROUTES_BY_STOP[sid] ?? [])),
-        ];
-        const mtrFetches: Promise<StopEtaRow[]>[] = mtrRouteNames.map((routeName) =>
-          fetch(`/api/mtr-bus-route?routeName=${encodeURIComponent(routeName)}&lang=zh`)
-            .then((r) => (r.ok ? r.json() : {}))
-            .then((json: Record<string, unknown>) => {
-              if (!json.busStop || !Array.isArray(json.busStop)) return [];
-              type MtrStop = {
-                busStopId: string;
-                bus: { arrivalTimeInSecond: string; arrivalTimeText: string; isDelayed: string }[];
-              };
-              // Only include stops that are in our nearby list
-              const nearbyIdSet = new Set(nearbyMtrIds);
-              const rows: StopEtaRow[] = [];
-              for (const s of json.busStop as MtrStop[]) {
-                if (!nearbyIdSet.has(s.busStopId)) continue;
-                const nearbyInfo = nearbyStops.find((n) => n.stopId === s.busStopId);
-                const firstBus = (s.bus ?? []).find((b) => {
-                  const secs = parseInt(b.arrivalTimeInSecond, 10);
-                  const text = (b.arrivalTimeText ?? "").toLowerCase();
-                  if (text.includes("departed") || text.includes("已離開")) return false;
-                  if (!Number.isNaN(secs) && secs >= 7200) return false;
-                  return !Number.isNaN(secs) && secs >= -30;
+        const [sameIdRows, nearbyRows] = await Promise.all([
+          directRowsPromise,
+          Promise.all(
+            nearbyStops.map(async (stop) => {
+              let liveRows: StopEtaRow[] = [];
+              if (stop.company !== "MTRBUS") {
+                const operator = stop.company.toLowerCase();
+                const routeIds = stop.routes
+                  .map((route) => route.routeId)
+                  .filter((routeId): routeId is string => !!routeId);
+                const params = new URLSearchParams({
+                  stopId: stop.stopId,
+                  company: operator,
                 });
-                if (!firstBus) continue;
-                rows.push({
-                  route: routeName,
-                  co: "MTRBUS",
-                  dir: "O",
-                  dest_tc: nearbyInfo?.name_tc ?? routeName,
-                  dest_en: routeName,
-                  etas: [
-                    {
-                      // MTR Bus doesn't use ISO timestamps — encode seconds as a synthetic timestamp
-                      eta: null,
-                      eta_seq: 1,
-                      rmk_tc: firstBus.isDelayed === "1" ? "延誤" : "",
-                      rmk_en: firstBus.isDelayed === "1" ? "Delayed" : "",
-                    },
-                  ],
-                });
+                if (operator === "nlb" && routeIds.length > 0) {
+                  params.set("routeIds", [...new Set(routeIds)].join(","));
+                }
+                const response = await fetch(`/api/stop-all-eta?${params}`);
+                if (response.ok) {
+                  const json = (await response.json()) as {
+                    rows?: StopEtaRow[];
+                  };
+                  liveRows = json.rows ?? [];
+                }
               }
-              return rows;
-            })
-            .catch(() => []),
-        );
 
-        const [nearbyKmbCtbRows, mtrRows] = await Promise.all([
-          Promise.all(nearbyKmbCtbFetches).then((r) => r.flat()),
-          Promise.all(mtrFetches).then((r) => r.flat()),
+              return stop.routes.map((route) => {
+                const live = liveRows.find(
+                  (row) =>
+                    row.co.toUpperCase() === route.company &&
+                    row.route === route.route &&
+                    row.dir === route.dir,
+                );
+                return {
+                  route: route.route,
+                  co: route.company,
+                  dir: route.dir,
+                  dest_tc: route.dest_tc || live?.dest_tc || "",
+                  dest_en: route.dest_en || live?.dest_en || "",
+                  etas: live?.etas ?? [],
+                  stopId: stop.stopId,
+                  lat: String(stop.lat),
+                  long: String(stop.lng),
+                  routeId: route.routeId ?? live?.routeId,
+                  serviceType: route.serviceType ?? live?.serviceType,
+                };
+              });
+            }),
+          ).then((rows) => rows.flat()),
         ]);
 
         if (cancelled) return;
 
-        // Merge all rows and deduplicate
-        const allRows = [...sameIdRows, ...nearbyKmbCtbRows, ...mtrRows];
-        const seen = new Set<string>();
-        const filtered = allRows.filter((row) => {
+        const deduplicated = new Map<string, OtherRoute>();
+        for (const row of [...sameIdRows, ...nearbyRows]) {
           const key = `${row.co.toUpperCase()}|${row.route}|${row.dir}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return !(row.co.toUpperCase() === info!.company && row.route === info!.route);
-        });
-        setOtherRoutes(filtered);
-      } catch {
-        // ignore
+          if (
+            row.co.toUpperCase() === info.company &&
+            row.route === info.route
+          ) {
+            continue;
+          }
+          const existing = deduplicated.get(key);
+          if (!existing || (existing.etas.length === 0 && row.etas.length > 0)) {
+            deduplicated.set(key, row);
+          }
+        }
+        setOtherRoutes(
+          [...deduplicated.values()].sort((a, b) =>
+            a.route.localeCompare(b.route, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            }),
+          ),
+        );
+      } catch (error) {
+        console.error("[BusStopModal] Cross-operator lookup failed:", error);
+        if (!cancelled) setNearbyError(true);
       }
     }
     void load();
@@ -421,17 +515,40 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
 
   if (!info) return null;
 
+  const sectionLabels = [
+    t("bus.etaSectionTitle"),
+    t("bus.mapSectionTitle"),
+    t("bus.otherRoutesTitle"),
+  ];
   const validEtas = info.etas.filter(
     (e) => e.eta || e.etaSeconds != null || e.etaText,
   );
   const color = CO_COLOR[info.company] ?? "#555";
   const labelKey = CO_LABEL_KEY[info.company];
   const label = labelKey ? t(labelKey) : info.company;
-
-  const mapUrl =
-    info.lat && info.long
-      ? `https://maps.google.com/maps?q=${info.lat},${info.long}`
-      : null;
+  const openOtherRoute = (row: OtherRoute) => {
+    const params = new URLSearchParams({
+      company: row.co.toUpperCase(),
+      route: row.route,
+      dir: row.dir,
+      stopId: row.stopId,
+    });
+    if (row.routeId) params.set("routeId", row.routeId);
+    if (row.serviceType) params.set("serviceType", row.serviceType);
+    router.push(`/go_back?${params.toString()}`);
+  };
+  const handleSectionScroll = () => {
+    const track = slidesRef.current;
+    if (!track || track.clientWidth === 0) return;
+    const index = Math.round(track.scrollLeft / track.clientWidth);
+    setActiveSection(Math.max(0, Math.min(sectionLabels.length - 1, index)));
+  };
+  const navigateToSection = (index: number) => {
+    const track = slidesRef.current;
+    if (!track) return;
+    setActiveSection(index);
+    track.scrollTo({ left: index * track.clientWidth, behavior: "smooth" });
+  };
 
   // Single motion root → AnimatePresence tracks exactly one child, no "multiple children" warning.
   // Scrim is a plain div (no motion exit needed — it fades with the parent).
@@ -465,7 +582,7 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
 
       {/* Sheet — slides in on open; disappears with parent fade-out on close */}
       <motion.div
-        ref={sheetRef}
+        className={classes.sheet}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 340, damping: 34 }}
@@ -479,7 +596,11 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
           borderRadius: "24px 24px 0 0",
           maxHeight: "60vh",
           minHeight: "60vh",
-          overflowY: "auto",
+          height: "60vh",
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
           paddingBottom: "env(safe-area-inset-bottom, 16px)",
           willChange: "transform",
         }}
@@ -495,7 +616,7 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
           }}
         />
 
-        <div style={{ padding: "16px 20px 24px" }}>
+        <div className={classes.sheetContent}>
           {/* ── Stop header ─────────────────────────── */}
           <div
             style={{
@@ -646,66 +767,43 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
             );
           })()}
 
-          {/* ── ETA section ─────────────────────────── */}
-          <div
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              color: "rgba(255,255,255,0.35)",
-              marginBottom: "10px",
-              textTransform: "uppercase",
-            }}
-          >
-            {t("bus.etaSectionTitle")}
+          <div className={classes.sectionPager}>
+            <div className={classes.sectionDots}>
+              {sectionLabels.map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={classes.sectionDot}
+                  aria-label={label}
+                  aria-pressed={activeSection === index}
+                  aria-controls={`stop-section-${index}`}
+                  onClick={() => navigateToSection(index)}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={classes.sectionDotIndicator}
+                  />
+                </button>
+              ))}
+            </div>
+            <div className={classes.sectionLabel} aria-live="polite">
+              {sectionLabels[activeSection]}
+            </div>
           </div>
 
-          {validEtas.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "28px 0",
-                color: "rgba(255,255,255,0.3)",
-                fontSize: "14px",
-              }}
+          <div
+            ref={slidesRef}
+            className={classes.slideTrack}
+            onScroll={handleSectionScroll}
+            aria-label={t("bus.stopDetailsSections")}
+          >
+            <section
+              id="stop-section-0"
+              className={classes.slide}
+              data-stop-slide
+              aria-label={sectionLabels[0]}
             >
-              {t("bus.noEtaData")}
-            </div>
-          ) : (
-            validEtas.slice(0, 3).map((item, i) => (
-              <EtaSlot key={i} item={item} nowSec={nowSec} isFirst={i === 0} />
-            ))
-          )}
-
-          {/* ── Map button ──────────────────────────── */}
-          {mapUrl && (
-            <a
-              href={mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                marginTop: "16px",
-                padding: "12px",
-                borderRadius: "12px",
-                background: "rgba(10,132,255,0.1)",
-                border: "1px solid rgba(10,132,255,0.25)",
-                color: "#0A84FF",
-                textDecoration: "none",
-                fontSize: "14px",
-                fontWeight: 600,
-              }}
-            >
-              📍 {t("bus.viewOnMap")}
-            </a>
-          )}
-
-          {/* ── Other routes at this stop ────────── */}
-          {otherRoutes.length > 0 && (
-            <div style={{ marginTop: "22px" }}>
+              {/* ── ETA section ─────────────────────────── */}
               <div
                 style={{
                   fontSize: "11px",
@@ -716,115 +814,227 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
                   textTransform: "uppercase",
                 }}
               >
-                {t("bus.otherRoutesTitle")}
+                {t("bus.etaSectionTitle")}
               </div>
-              {otherRoutes.map((row, idx) => {
-                const coColor = CO_COLOR[row.co.toUpperCase()] ?? "#555";
-                const coText = CO_TEXT[row.co.toUpperCase()] ?? "#fff";
-                const isMtrBus = row.co.toUpperCase() === "MTRBUS";
-                const firstEta = row.etas.find((e) => e.eta);
-                let etaMins: number | null = null;
-                if (firstEta?.eta) {
-                  const ms = Date.parse(firstEta.eta) - nowSec * 1000;
-                  if (!isNaN(ms)) etaMins = Math.floor(ms / 60000);
-                }
-                const arrived = etaMins !== null && etaMins <= 0;
-                const etaColor =
-                  arrived
-                    ? "#34C759"
-                    : etaMins !== null
-                      ? etaMins <= 3
-                        ? "#FF453A"
-                        : etaMins <= 8
-                          ? "#FFD60A"
-                          : "#0A84FF"
-                      : "rgba(255,255,255,0.3)";
-                return (
+
+              {validEtas.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "28px 0",
+                    color: "rgba(255,255,255,0.3)",
+                    fontSize: "14px",
+                  }}
+                >
+                  {t("bus.noEtaData")}
+                </div>
+              ) : (
+                validEtas.slice(0, 3).map((item, i) => (
+                  <EtaSlot
+                    key={i}
+                    item={item}
+                    nowSec={nowSec}
+                    isFirst={i === 0}
+                  />
+                ))
+              )}
+            </section>
+
+            <section
+              id="stop-section-1"
+              className={classes.slide}
+              data-stop-slide
+              aria-label={sectionLabels[1]}
+            >
+              <StopMap
+                lat={info.lat}
+                long={info.long}
+                title={info.name_tc}
+                active={activeSection === 1}
+              />
+            </section>
+
+            <section
+              id="stop-section-2"
+              className={classes.slide}
+              data-stop-slide
+              aria-label={sectionLabels[2]}
+            >
+              <div style={{ marginTop: "4px" }}>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    color: "rgba(255,255,255,0.35)",
+                    marginBottom: "10px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {t("bus.otherRoutesTitle")}
+                </div>
+                {nearbyError && (
                   <div
-                    key={`${row.co}|${row.route}|${row.dir}|${idx}`}
+                    role="status"
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      padding: "9px 12px",
-                      borderRadius: "11px",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                      marginBottom: "7px",
+                      color: "rgba(255,255,255,0.45)",
+                      fontSize: "12px",
+                      marginBottom: "10px",
                     }}
                   >
-                    {/* Route badge */}
-                    <span
+                    {t("bus.nearbyRoutesError" as TranslationKey)}
+                  </div>
+                )}
+                {otherRoutes.length === 0 && !nearbyError && (
+                  <div
+                    style={{
+                      color: "rgba(255,255,255,0.3)",
+                      fontSize: "13px",
+                      padding: "18px 0",
+                      textAlign: "center",
+                    }}
+                  >
+                    {t("bus.noOtherRoutes")}
+                  </div>
+                )}
+                {otherRoutes.map((row, idx) => {
+                  const coColor = CO_COLOR[row.co.toUpperCase()] ?? "#555";
+                  const coText = CO_TEXT[row.co.toUpperCase()] ?? "#fff";
+                  const isMtrBus = row.co.toUpperCase() === "MTRBUS";
+                  const firstEta = row.etas.find((e) => e.eta);
+                  let etaMins: number | null = null;
+                  if (firstEta?.eta) {
+                    const ms = Date.parse(firstEta.eta) - nowSec * 1000;
+                    if (!isNaN(ms)) etaMins = Math.floor(ms / 60000);
+                  }
+                  const arrived = etaMins !== null && etaMins <= 0;
+                  const etaColor =
+                    arrived
+                      ? "#34C759"
+                      : etaMins !== null
+                        ? etaMins <= 3
+                          ? "#FF453A"
+                          : etaMins <= 8
+                            ? "#FFD60A"
+                            : "#0A84FF"
+                        : "rgba(255,255,255,0.3)";
+                  return (
+                    <button
+                      type="button"
+                      key={`${row.co}|${row.route}|${row.dir}|${idx}`}
+                      onClick={() => openOtherRoute(row)}
+                      aria-label={`${row.co} ${row.route}, ${row.dest_tc}`}
                       style={{
-                        background: coColor,
-                        color: coText,
-                        borderRadius: "6px",
-                        padding: "3px 8px",
-                        fontSize: "12px",
-                        fontWeight: 800,
-                        letterSpacing: "0.05em",
-                        flexShrink: 0,
-                        minWidth: "38px",
-                        textAlign: "center",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "9px 12px",
+                        borderRadius: "11px",
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.07)",
+                        marginBottom: "7px",
+                        width: "100%",
+                        color: "inherit",
+                        font: "inherit",
+                        textAlign: "left",
+                        cursor: "pointer",
                       }}
                     >
-                      {row.route}
-                    </span>
-                    {/* Destination */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          color: "rgba(255,255,255,0.82)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {t("common.towards")} {row.dest_tc}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "10px",
-                          color: "rgba(255,255,255,0.3)",
-                          marginTop: "1px",
-                        }}
-                      >
-                        {row.co.toUpperCase()}
-                      </div>
-                    </div>
-                    {/* Next ETA — MTR Bus proximity rows have no ISO timestamps */}
-                    {isMtrBus ? (
                       <span
                         style={{
-                          fontSize: "10px",
-                          fontWeight: 600,
-                          color: coColor,
-                          background: `${coColor}18`,
-                          border: `1px solid ${coColor}40`,
+                          background: coColor,
+                          color: coText,
                           borderRadius: "6px",
-                          padding: "2px 7px",
+                          padding: "3px 8px",
+                          fontSize: "12px",
+                          fontWeight: 800,
+                          letterSpacing: "0.05em",
                           flexShrink: 0,
+                          minWidth: "38px",
+                          textAlign: "center",
                         }}
                       >
-                        {t("bus.nearby")}
+                        {row.route}
                       </span>
-                    ) : etaMins === null ? (
-                      <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.3)" }}>--</span>
-                    ) : arrived ? (
-                      <span style={{ fontSize: "13px", fontWeight: 800, color: etaColor }}>{t("common.arriving")}</span>
-                    ) : (
-                      <span style={{ fontSize: "14px", fontWeight: 800, color: etaColor, flexShrink: 0 }}>
-                        {etaMins}
-                        <span style={{ fontSize: "10px", fontWeight: 500 }}> {t("common.min")}</span>
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            color: "rgba(255,255,255,0.82)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {t("common.towards")} {row.dest_tc}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            color: "rgba(255,255,255,0.3)",
+                            marginTop: "1px",
+                          }}
+                        >
+                          {row.co.toUpperCase()}
+                        </div>
+                      </div>
+                      {isMtrBus ? (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            color: coColor,
+                            background: `${coColor}18`,
+                            border: `1px solid ${coColor}40`,
+                            borderRadius: "6px",
+                            padding: "2px 7px",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {t("bus.nearby")}
+                        </span>
+                      ) : etaMins === null ? (
+                        <span
+                          style={{
+                            fontSize: "13px",
+                            color: "rgba(255,255,255,0.3)",
+                          }}
+                        >
+                          --
+                        </span>
+                      ) : arrived ? (
+                        <span
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: 800,
+                            color: etaColor,
+                          }}
+                        >
+                          {t("common.arriving")}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: 800,
+                            color: etaColor,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {etaMins}
+                          <span style={{ fontSize: "10px", fontWeight: 500 }}>
+                            {" "}
+                            {t("common.min")}
+                          </span>
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
         </div>
       </motion.div>
     </motion.div>

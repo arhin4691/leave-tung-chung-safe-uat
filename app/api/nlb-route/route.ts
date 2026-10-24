@@ -17,7 +17,17 @@ export async function GET(req: NextRequest) {
       { next: { revalidate: 600 } }
     );
     const listJson = await listRes.json();
-    const stops: any[] = listJson.stops ?? [];
+    const stops: Array<Record<string, unknown>> = (
+      (listJson.stops ?? []) as Array<Record<string, unknown>>
+    ).map((stop) => ({
+      ...stop,
+      stopLatitude:
+        (stop.stopLatitude as string | undefined) ??
+        (stop.latitude as string | undefined),
+      stopLongitude:
+        (stop.stopLongitude as string | undefined) ??
+        (stop.longitude as string | undefined),
+    }));
 
     if (stops.length === 0) {
       return NextResponse.json({ stops: [], isWorking: false });

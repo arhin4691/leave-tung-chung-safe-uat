@@ -16,6 +16,7 @@ import { removeFavStop } from "@/shared/util/favStops";
 import BusStopModal from "./BusStopModal";
 import type { SelectedStopInfo } from "@/shared/types";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
+import { MTR_BUS_STOP_LOCATIONS } from "@/shared/data/MTR_BUS_STOP_LOCATIONS";
 import { useLocale } from "@/shared/context/locale-context";
 
 const POLL_MS = 15_000;
@@ -99,10 +100,18 @@ async function fetchRouteStopsForFav(stop: FavRouteStop): Promise<NormalisedStop
     if (!json.busStop || !Array.isArray(json.busStop)) return [];
     return (json.busStop as { busStopId: string }[]).map((s, i) => {
       const info = MTR_BUS_STOP_NAMES[s.busStopId];
+      const location = MTR_BUS_STOP_LOCATIONS[s.busStopId];
       const dashIdx = s.busStopId.indexOf("-");
       const code = dashIdx >= 0 ? s.busStopId.slice(dashIdx + 1) : s.busStopId;
       const name = info?.zh || `站 ${i + 1} (${code})`;
-      return { id: s.busStopId, name_tc: name, name_en: info?.en || name, seq: i + 1 };
+      return {
+        id: s.busStopId,
+        name_tc: name,
+        name_en: info?.en || name,
+        lat: location?.lat.toString(),
+        long: location?.lng.toString(),
+        seq: i + 1,
+      };
     });
   }
   return [];

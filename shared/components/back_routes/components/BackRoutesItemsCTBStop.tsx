@@ -21,11 +21,13 @@ const BackRoutesItemsCTBStop: React.FC<BackRoutesItemsCTBStopProps> = (props) =>
   const { t } = useLocale();
   // Use parent-supplied ETA; track a local clock for countdown display
   const eta: any[] = props.eta ?? [];
-  const [now, setNow] = useState<number>(Math.floor(Date.now() / 1000));
+  // 0 as initial value matches server render — avoids hydration mismatch.
+  const [now, setNow] = useState<number>(0);
   const [modal, setModal] = useState<boolean>(false);
 
   // Keep `now` in sync so countdown labels refresh every second
   useEffect(() => {
+    setNow(Math.floor(Date.now() / 1000)); // client-only init
     const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
     return () => clearInterval(t);
   }, []);
@@ -61,7 +63,7 @@ const BackRoutesItemsCTBStop: React.FC<BackRoutesItemsCTBStopProps> = (props) =>
             </span>
           </div>
         </Grid>
-        {eta.length > 0 ? (
+        {eta.length > 0 && now > 0 ? (
           <Grid item xs={4}>
             {Math.floor((Date.parse(eta[0].eta) / 1000 - now) / 60) <= 0 ? (
               <span
