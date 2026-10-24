@@ -100,6 +100,7 @@ export const translations = {
     "update.2026-04-05": "增強介面和修復一些小問題",
     "update.2026-04-06": "新增距離偵測和最近站排序功能",
     "update.2026-04-09": "新增上一站/下一站導航按鈕。",
+    "update.2026-10-25": "新增其他巴士路線功能﹑新增即時MAP功能。",
     // Basic
     "setting.edit": "編輯",
     "common.sortNearest": "最近站優先",
@@ -251,6 +252,7 @@ export const translations = {
     "update.2023-12-20": "Added MTR station car park information",
     "update.2023-11-30": "Added bus stop search and favourites",
     "update.2026-04-09": "Added last stop / next stop navigation buttons.",
+    "update.2026-10-25": "Added other bus route features and live map functionality.",
     // Basic
     "setting.edit": "Edit",
     // Direction / ETA common
