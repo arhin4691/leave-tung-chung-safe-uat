@@ -3,12 +3,10 @@
 import BusFavList from "@/shared/components/bus_routes/components/BusFavList";
 import { UpdateContext } from "@/shared/context/update-context";
 import { Grid } from "@mui/material";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import RoadStatus from "@/shared/components/home/RoadStatus";
 import { useLocale } from "@/shared/context/locale-context";
-import { getFavStops } from "@/shared/util/favStops";
-import type { FavRouteStop } from "@/shared/types";
 
 const containerVariants = {
   hidden: {},
@@ -41,20 +39,14 @@ export default function Home() {
   const [likedItem, setLikedItem] = useState("");
   const [likedBack, setLikedBack] = useState("");
   const [likedNlb, setLikedNlb] = useState("");
-  const [likedRouteStop, setLikedRouteStop] = useState<FavRouteStop[]>([]);
   // mounted guard: keep SSR and client initial render identical so React
   // hydration never sees a mismatch from localStorage-populated state.
   const [mounted, setMounted] = useState(false);
-
-  const refreshRouteStops = useCallback(() => {
-    setLikedRouteStop(getFavStops());
-  }, []);
 
   useEffect(() => {
     setLikedItem(localStorage.getItem("likedBus")?.replace(/,\s*$/, "") ?? "");
     setLikedBack(localStorage.getItem("likedBack")?.replace(/,\s*$/, "") ?? "");
     setLikedNlb(localStorage.getItem("likedNlb")?.replace(/,\s*$/, "") ?? "");
-    setLikedRouteStop(getFavStops());
     setMounted(true);
   }, []);
 
@@ -101,8 +93,6 @@ export default function Home() {
                   data={safeParse(likedItem)}
                   backData={safeParse(likedBack)}
                   nlbData={safeParse(likedNlb)}
-                  routeStopData={likedRouteStop}
-                  onRouteStopRemoved={refreshRouteStops}
                   mode="home"
                 />
               ) : (
@@ -110,7 +100,6 @@ export default function Home() {
                   data={[]}
                   backData={[]}
                   nlbData={[]}
-                  routeStopData={[]}
                   mode="home"
                 />
               )}

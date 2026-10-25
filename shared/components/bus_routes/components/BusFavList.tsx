@@ -14,8 +14,8 @@ import type {
   BusRoute,
   FavBackStop,
   FavNlbStop,
-  FavRouteStop,
 } from "@/shared/types";
+import { useFavouriteLists } from "@/shared/hooks/useFavouriteLists";
 
 const LogoYellow = "/files/images/logo_yellow.png";
 const LogoLWB = "/files/images/logo_lwb.png";
@@ -43,10 +43,6 @@ interface BusFavListProps {
   data: BusRoute[];
   backData: FavBackStop[] | string;
   nlbData: FavNlbStop[];
-  /** New-style route stop favourites (likedRouteStop) */
-  routeStopData?: FavRouteStop[];
-  /** Called when a routeStop fav is removed so parent re-reads localStorage */
-  onRouteStopRemoved?: () => void;
   mode?: string;
 }
 
@@ -57,19 +53,32 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
     props.backData,
   );
   const [nlbData, setNlbData] = useState<FavNlbStop[]>(props.nlbData);
-  const [routeStopData, setRouteStopData] = useState<FavRouteStop[]>(
-    props.routeStopData ?? [],
-  );
   const [editMode, setEditMode] = useState(false);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const {
+    lists,
+    selectedList,
+    selectList,
+    createList,
+    renameList,
+    deleteList,
+    setDefaultList,
+    removeRoute,
+  } = useFavouriteLists();
+  const [listMenuId, setListMenuId] = useState<string | null>(null);
+  const [listNameMode, setListNameMode] = useState<"create" | "rename" | null>(
+    null,
+  );
+  const [listTargetId, setListTargetId] = useState<string | null>(null);
+  const [listName, setListName] = useState("");
+  const [listNameError, setListNameError] = useState("");
 
   useEffect(() => {
     setData(props.data);
     setBackData(props.backData);
     setNlbData(props.nlbData);
-    setRouteStopData(props.routeStopData ?? []);
-  }, [props.data, props.backData, props.nlbData, props.routeStopData]);
+  }, [props.data, props.backData, props.nlbData]);
 
   useEffect(() => {
     if (!navigator?.geolocation) return;
@@ -111,7 +120,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
   }, [backDataArray, userLat, userLng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sortedRouteStopData = useMemo(() => {
-    const list = [...routeStopData];
+    const list = [...(selectedList?.routes ?? [])];
     if (userLat !== null && userLng !== null) {
       return list.sort((a, b) => {
         const aLat = parseFloat(a.lat ?? "");
@@ -128,7 +137,46 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
       });
     }
     return list.sort((a, b) => a.route.localeCompare(b.route));
-  }, [routeStopData, userLat, userLng]);
+  }, [selectedList, userLat, userLng]);
+
+  const beginCreateList = () => {
+    setListNameMode("create");
+    setListTargetId(null);
+    setListName("");
+    setListNameError("");
+    setListMenuId(null);
+  };
+
+  const saveListName = () => {
+    const cleanName = listName.trim();
+    if (!cleanName) {
+      setListNameError(t("fav.nameRequired"));
+      return;
+    }
+    if (cleanName.length > 12) {
+      setListNameError(t("fav.nameTooLong"));
+      return;
+    }
+
+    if (listNameMode === "create") {
+      const created = createList(cleanName);
+      if (!created) {
+        setListNameError(t("fav.nameDuplicate"));
+        return;
+      }
+      selectList(created.id);
+    } else if (
+      listNameMode === "rename" &&
+      listTargetId &&
+      !renameList(listTargetId, cleanName)
+    ) {
+      setListNameError(t("fav.nameDuplicate"));
+      return;
+    }
+    setListNameMode(null);
+    setListName("");
+    setListNameError("");
+  };
 
   const likedNLB = sortedNlbData.map((x, index) => (
     <React.Fragment key={index}>
@@ -160,6 +208,8 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
       </Card>
     </React.Fragment>
   ));
+  const showListTabs = lists.length > 1 || editMode;
+  const activeFavouriteList = selectedList ?? lists[0];
 
   return (
     <>
@@ -195,20 +245,10 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
             >
               {t("home.favourite")}
             </span>
-            <span
-              style={{
-                fontSize: "10px",
-                color: userLat !== null ? "#34C759" : "var(--text-secondary)",
-                opacity: 0.75,
-                marginLeft: "6px",
-              }}
-            >
-              {userLat !== null ? t("common.sortNearest") : t("common.sortByNumber")}
-            </span>
           </div>
           <button
             onClick={() => setEditMode((o) => !o)}
-            aria-label={editMode ? "done editing" : "edit favourites"}
+            aria-label={editMode ? t("fav.done") : t("setting.edit")}
             style={{
               background: editMode
                 ? "rgba(255,159,10,0.15)"
@@ -234,7 +274,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                {t("common.close")}
+                {t("fav.done")}
               </>
             ) : (
               <>
@@ -246,6 +286,275 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
               </>
             )}
           </button>
+        </div>
+        {showListTabs && (
+          <div style={{ marginBottom: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                minWidth: 0,
+              }}
+            >
+              <div
+                role="tablist"
+                aria-label={t("home.favourite")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  flex: 1,
+                  minWidth: 0,
+                  overflowX: "auto",
+                  padding: "2px 0 5px",
+                  scrollbarWidth: "none",
+                }}
+              >
+                {lists.map((list) => (
+                  <div
+                    key={list.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      flexShrink: 0,
+                      border: "1px solid",
+                      borderColor:
+                        selectedList?.id === list.id
+                          ? "var(--accent-blue)"
+                          : "var(--glass-border)",
+                      borderRadius: 9999,
+                      background:
+                        selectedList?.id === list.id
+                          ? "var(--accent-blue)"
+                          : "rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={selectedList?.id === list.id}
+                      onClick={() => {
+                        selectList(list.id);
+                        setListMenuId(null);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        border: 0,
+                        borderRadius: 9999,
+                        padding: editMode ? "6px 0 6px 11px" : "6px 11px",
+                        background: "transparent",
+                        color:
+                          selectedList?.id === list.id
+                            ? "#fff"
+                            : "var(--text-secondary)",
+                        whiteSpace: "nowrap",
+                        font: "inherit",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {list.isDefault && <span aria-label={t("fav.default")}>📌</span>}
+                      {list.name}
+                    </button>
+                    {editMode && (
+                      <button
+                        type="button"
+                        aria-label={`${list.name} ${t("common.more")}`}
+                        onClick={() =>
+                          setListMenuId((current) =>
+                            current === list.id ? null : list.id,
+                          )
+                        }
+                        style={{
+                          border: 0,
+                          borderRadius: "50%",
+                          width: 28,
+                          height: 28,
+                          margin: "0 3px 0 1px",
+                          background: "transparent",
+                          color:
+                            selectedList?.id === list.id
+                              ? "rgba(255,255,255,0.9)"
+                              : "var(--text-secondary)",
+                          fontSize: 16,
+                          lineHeight: 1,
+                          cursor: "pointer",
+                        }}
+                      >
+                        •••
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {editMode && (
+                <button
+                  type="button"
+                  aria-label={t("fav.createNewList")}
+                  onClick={beginCreateList}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    flexShrink: 0,
+                    border: "1px solid var(--accent-blue)",
+                    borderRadius: "50%",
+                    background: "rgba(10,132,255,0.16)",
+                    color: "var(--accent-blue)",
+                    fontSize: 21,
+                    lineHeight: 1,
+                    cursor: "pointer",
+                  }}
+                >
+                  +
+                </button>
+              )}
+            </div>
+
+            {listMenuId && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  padding: 8,
+                  margin: "2px 0 7px",
+                  borderRadius: 14,
+                  border: "1px solid var(--glass-border)",
+                  background: "var(--glass-bg)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDefaultList(listMenuId);
+                    setListMenuId(null);
+                  }}
+                  style={listActionButtonStyle}
+                >
+                  📌 {t("fav.setDefault")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = lists.find((list) => list.id === listMenuId);
+                    if (target) {
+                      setListTargetId(target.id);
+                      setListName(target.name);
+                      setListNameMode("rename");
+                      setListNameError("");
+                    }
+                    setListMenuId(null);
+                  }}
+                  style={listActionButtonStyle}
+                >
+                  {t("fav.renameList")}
+                </button>
+                <button
+                  type="button"
+                  disabled={lists.length <= 1}
+                  onClick={() => {
+                    deleteList(listMenuId);
+                    setListMenuId(null);
+                  }}
+                  style={{
+                    ...listActionButtonStyle,
+                    color:
+                      lists.length <= 1
+                        ? "var(--text-secondary)"
+                        : "var(--accent-red)",
+                    opacity: lists.length <= 1 ? 0.5 : 1,
+                  }}
+                >
+                  {t("fav.deleteList")}
+                </button>
+              </div>
+            )}
+
+            {listNameMode && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: 8,
+                  margin: "2px 0 7px",
+                  borderRadius: 14,
+                  border: "1px solid var(--glass-border)",
+                  background: "rgba(255,255,255,0.04)",
+                }}
+              >
+                <input
+                  autoFocus
+                  value={listName}
+                  maxLength={12}
+                  placeholder={t("fav.listNamePlaceholder")}
+                  onChange={(event) => {
+                    setListName(event.target.value);
+                    setListNameError("");
+                  }}
+                  style={{
+                    minWidth: 120,
+                    flex: 1,
+                    border: "1px solid var(--glass-border)",
+                    borderRadius: 10,
+                    padding: "8px 10px",
+                    background: "var(--glass-bg)",
+                    color: "var(--text-primary)",
+                    font: "inherit",
+                    fontSize: 13,
+                  }}
+                />
+                {listNameError && (
+                  <span
+                    role="alert"
+                    style={{
+                      flexBasis: "100%",
+                      color: "var(--accent-red)",
+                      fontSize: 11,
+                    }}
+                  >
+                    {listNameError}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setListNameMode(null);
+                    setListNameError("");
+                  }}
+                  style={listActionButtonStyle}
+                >
+                  {t("fav.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={saveListName}
+                  style={{
+                    ...listActionButtonStyle,
+                    background: "var(--accent-blue)",
+                    color: "#fff",
+                  }}
+                >
+                  {listNameMode === "create" ? t("fav.create") : t("fav.done")}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        <div
+          style={{
+            margin: "0 0 8px 14px",
+            color: userLat !== null ? "#34C759" : "var(--text-secondary)",
+            opacity: 0.75,
+            fontSize: 10,
+          }}
+        >
+          {userLat !== null ? t("common.sortNearest") : t("common.sortByNumber")}
         </div>
         <>
           <Grid container spacing={0}>
@@ -364,7 +673,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
           {data.length === 0 &&
             backDataArray.length === 0 &&
             nlbData.length === 0 &&
-            routeStopData.length === 0 && (
+            (activeFavouriteList?.routes.length ?? 0) === 0 && (
               <div className="badge-reverse center p-1 m-1">
                 😔
                 {t("fav.youHaveNoFav")}
@@ -372,7 +681,7 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
             )}
 
           {/* ── New-style route stop favourites ─── */}
-          {routeStopData.length > 0 && (
+            {(activeFavouriteList?.routes.length ?? 0) > 0 && (
             <Grid container spacing={0}>
               <Grid item xs={12} className="">
                 {sortedRouteStopData.map((s, i) => (
@@ -380,7 +689,11 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
                     key={`${s.company}-${s.route}-${s.stopId}-${i}`}
                     stop={s}
                     showRemove={editMode}
-                    onRemove={() => props.onRouteStopRemoved?.()}
+                    onRemove={(stop) => {
+                      if (activeFavouriteList) {
+                        removeRoute(activeFavouriteList.id, stop);
+                      }
+                    }}
                   />
                 ))}
               </Grid>
@@ -390,6 +703,17 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
       </Card>
     </>
   );
+};
+
+const listActionButtonStyle: React.CSSProperties = {
+  border: "1px solid var(--glass-border)",
+  borderRadius: 10,
+  padding: "7px 9px",
+  background: "rgba(255,255,255,0.06)",
+  color: "var(--text-primary)",
+  font: "inherit",
+  fontSize: 11,
+  cursor: "pointer",
 };
 
 export default BusFavList;

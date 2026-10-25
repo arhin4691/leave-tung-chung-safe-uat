@@ -19,11 +19,14 @@ import StopEtaRow from "./StopEtaRow";
 import BusStopModal from "./BusStopModal";
 import type {
   BusRouteEntry,
+  FavRouteStop,
   NormalisedStop,
   RouteEtaItem,
   SelectedStopInfo,
 } from "@/shared/types";
-import { toggleFavStop, isFavStop, getFavStops } from "@/shared/util/favStops";
+import { getAllFavouriteRoutes } from "@/shared/util/favouriteLists";
+import { useFavouriteLists } from "@/shared/hooks/useFavouriteLists";
+import FavouriteListSelector from "@/shared/components/ui/FavouriteListSelector";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
 import { MTR_BUS_STOP_LOCATIONS } from "@/shared/data/MTR_BUS_STOP_LOCATIONS";
 import { useLocale } from "@/shared/context/locale-context";
@@ -264,6 +267,7 @@ async function fetchMtrBusSchedule(
 
 const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
   const { t } = useLocale();
+  const { lists: favouriteLists, createList, addRoute } = useFavouriteLists();
   const [open, setOpen] = useState(false);
   const [stops, setStops] = useState<NormalisedStop[]>([]);
   const [etas, setEtas] = useState<Record<string, RouteEtaItem[]>>({});
@@ -274,16 +278,24 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
   const [selectedStop, setSelectedStop] = useState<SelectedStopInfo | null>(
     null,
   );
-  // Track favourite state as a Set of "stopId|route|company" keys so it's reactive
-  const [favKeys, setFavKeys] = useState<Set<string>>(() => {
-    const list = getFavStops();
-    return new Set(list.map((s) => `${s.stopId}|${s.route}|${s.company}`));
-  });
+  const [favKeys, setFavKeys] = useState<Set<string>>(new Set());
+  const [routeForFavourite, setRouteForFavourite] =
+    useState<FavRouteStop | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stopsLoaded = useRef(false);
   const handledInitialStop = useRef<string | null>(null);
+
+  useEffect(() => {
+    setFavKeys(
+      new Set(
+        getAllFavouriteRoutes().map(
+          (stop) => `${stop.stopId}|${stop.route}|${stop.company}`,
+        ),
+      ),
+    );
+  }, []);
 
   // Live clock ??ticks every second
   useEffect(() => {
@@ -613,12 +625,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
                       onSelectStop={setSelectedStop}
                       isFav={favKeys.has(favKey)}
                       onToggleFav={() => {
-                        const stillFav = !isFavStop(
-                          stop.id,
-                          entry.route,
-                          entry.company,
-                        );
-                        toggleFavStop({
+                        setRouteForFavourite({
                           stopId: stop.id,
                           name_tc: stop.name_tc,
                           name_en: stop.name_en,
@@ -630,15 +637,6 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
                           dest_tc: entry.dest_tc,
                           serviceType: entry.serviceType,
                           routeId: entry.routeId,
-                        });
-                        setFavKeys((prev) => {
-                          const next = new Set(prev);
-                          if (stillFav) {
-                            next.add(favKey);
-                          } else {
-                            next.delete(favKey);
-                          }
-                          return next;
                         });
                       }}
                     />
@@ -670,6 +668,21 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
         routeDirection={entry.dir}
         routeId={entry.routeId}
         serviceType={entry.serviceType}
+      />
+      <FavouriteListSelector
+        open={routeForFavourite !== null}
+        lists={favouriteLists}
+        route={routeForFavourite}
+        onClose={() => setRouteForFavourite(null)}
+        onCreate={createList}
+        onAdd={(listId, route) => {
+          addRoute(listId, route);
+          setFavKeys((previous) => {
+            const next = new Set(previous);
+            next.add(`${route.stopId}|${route.route}|${route.company}`);
+            return next;
+          });
+        }}
       />
     </>
   );

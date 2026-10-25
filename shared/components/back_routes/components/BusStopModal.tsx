@@ -10,7 +10,7 @@
  */
 "use client";
 
-import React, { memo, useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -266,6 +266,31 @@ type OtherRoute = StopEtaRow & {
   serviceType?: string;
 };
 
+function getNextBusTimestamp(route: OtherRoute): number | null {
+  let earliest: number | null = null;
+  for (const eta of route.etas) {
+    if (!eta.eta) continue;
+    const timestamp = Date.parse(eta.eta);
+    if (!Number.isFinite(timestamp)) continue;
+    if (earliest === null || timestamp < earliest) earliest = timestamp;
+  }
+  return earliest;
+}
+
+function compareOtherRoutesByNextBus(a: OtherRoute, b: OtherRoute): number {
+  const aNextBus = getNextBusTimestamp(a);
+  const bNextBus = getNextBusTimestamp(b);
+  if (aNextBus === null && bNextBus !== null) return 1;
+  if (aNextBus !== null && bNextBus === null) return -1;
+  if (aNextBus !== null && bNextBus !== null && aNextBus !== bNextBus) {
+    return aNextBus - bNextBus;
+  }
+  return a.route.localeCompare(b.route, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
 interface SectionSwipe {
   pointerId: number;
   startX: number;
@@ -335,6 +360,10 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({
     : "";
   const currentOtherRoutes =
     otherRoutesKey === stopKey ? otherRoutes : [];
+  const sortedOtherRoutes = useMemo(
+    () => [...currentOtherRoutes].sort(compareOtherRoutesByNextBus),
+    [currentOtherRoutes],
+  );
   const currentNearbyStatus =
     nearbyLoad.key === stopKey ? nearbyLoad.status : "idle";
   const currentEtaStatus = etaLoad.key === stopKey ? etaLoad.status : "idle";
@@ -1205,7 +1234,7 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({
                     {t("bus.nearbyEtaError")}
                   </div>
                 )}
-                {currentOtherRoutes.map((row, idx) => {
+                {sortedOtherRoutes.map((row) => {
                   const coColor = CO_COLOR[row.co.toUpperCase()] ?? "#555";
                   const coText = CO_TEXT[row.co.toUpperCase()] ?? "#fff";
                   const isMtrBus = row.co.toUpperCase() === "MTRBUS";
@@ -1229,7 +1258,7 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({
                   return (
                     <button
                       type="button"
-                      key={`${row.co}|${row.route}|${row.dir}|${idx}`}
+                      key={`${row.co.toUpperCase()}|${row.route}|${row.dir}`}
                       onClick={() => openOtherRoute(row)}
                       aria-label={`${row.co} ${row.route}, ${row.dest_tc}`}
                       style={{

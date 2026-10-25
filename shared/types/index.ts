@@ -202,6 +202,17 @@ export interface FavRouteStop {
   routeId?: string;
 }
 
+export type FavouriteRoute = FavRouteStop;
+
+export interface FavouriteList {
+  id: string;
+  name: string;
+  routes: FavouriteRoute[];
+  isDefault: boolean;
+  createdAt: number;
+  icon?: string;
+}
+
 export interface KmbStop {
   stop: string;
   name_tc: string;

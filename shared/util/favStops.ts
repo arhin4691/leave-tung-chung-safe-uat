@@ -1,36 +1,23 @@
 /**
- * favStops — localStorage helpers for the new FavRouteStop system.
- *
- * Stores an array of FavRouteStop under the key "likedRouteStop".
- * A favourite is uniquely identified by (stopId, route, company).
+ * Backwards-compatible helpers for route-stop favourites.
+ * New favourites are stored in favourite-lists-v2.
  */
 
 import type { FavRouteStop } from "@/shared/types";
-
-const KEY = "likedRouteStop";
+import {
+  addRouteToFavouriteList,
+  getAllFavouriteRoutes,
+  getFavouriteLists,
+  removeRouteFromFavouriteList,
+} from "@/shared/util/favouriteLists";
 
 export function getFavStops(): FavRouteStop[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "[]") as FavRouteStop[];
-  } catch {
-    return [];
-  }
-}
-
-function save(list: FavRouteStop[]): void {
-  localStorage.setItem(KEY, JSON.stringify(list));
+  return getAllFavouriteRoutes();
 }
 
 export function addFavStop(stop: FavRouteStop): void {
-  const list = getFavStops();
-  const exists = list.some(
-    (s) => s.stopId === stop.stopId && s.route === stop.route && s.company === stop.company,
-  );
-  if (!exists) {
-    list.push(stop);
-    save(list);
-  }
+  const defaultList = getFavouriteLists().find((list) => list.isDefault);
+  if (defaultList) addRouteToFavouriteList(defaultList.id, stop);
 }
 
 export function removeFavStop(
@@ -38,11 +25,13 @@ export function removeFavStop(
   route: string,
   company: string,
 ): void {
-  const list = getFavStops().filter(
-    (s) =>
-      !(s.stopId === stopId && s.route === route && s.company === company),
-  );
-  save(list);
+  for (const list of getFavouriteLists()) {
+    const match = list.routes.find(
+      (stop) =>
+        stop.stopId === stopId && stop.route === route && stop.company === company,
+    );
+    if (match) removeRouteFromFavouriteList(list.id, match);
+  }
 }
 
 export function isFavStop(
@@ -50,8 +39,9 @@ export function isFavStop(
   route: string,
   company: string,
 ): boolean {
-  return getFavStops().some(
-    (s) => s.stopId === stopId && s.route === route && s.company === company,
+  return getAllFavouriteRoutes().some(
+    (stop) =>
+      stop.stopId === stopId && stop.route === route && stop.company === company,
   );
 }
 

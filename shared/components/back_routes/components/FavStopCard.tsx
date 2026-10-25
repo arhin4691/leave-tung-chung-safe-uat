@@ -12,7 +12,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { FavRouteStop, RouteEtaItem, NormalisedStop } from "@/shared/types";
-import { removeFavStop } from "@/shared/util/favStops";
 import BusStopModal from "./BusStopModal";
 import type { SelectedStopInfo } from "@/shared/types";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
@@ -308,8 +307,8 @@ interface FavStopCardProps {
   stop: FavRouteStop;
   /** When true the heart/remove button is visible. Default: false. */
   showRemove?: boolean;
-  /** Called after the stop is removed from favourites */
-  onRemove: () => void;
+  /** Removes this stop from the currently selected list. */
+  onRemove: (stop: FavRouteStop) => void;
 }
 
 const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onRemove }) => {
@@ -539,8 +538,7 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onR
             <motion.button
               onClick={(e) => {
                 e.stopPropagation();
-                removeFavStop(stop.stopId, stop.route, stop.company);
-                onRemove();
+                onRemove(stop);
               }}
               whileTap={{ scale: 0.75 }}
               style={{

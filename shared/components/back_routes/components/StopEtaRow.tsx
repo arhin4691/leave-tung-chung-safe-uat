@@ -300,7 +300,7 @@ const StopEtaRow: React.FC<StopEtaRowProps> = memo(({
             lineHeight: 1,
             transition: "color 0.15s",
           }}
-          aria-label={isFav ? t("fav.removeStop") : t("fav.addStop")}
+          aria-label={t("fav.addStop")}
           aria-pressed={isFav}
         >
           {isFav ? "♥" : "♡"}
