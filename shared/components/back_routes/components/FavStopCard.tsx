@@ -11,7 +11,11 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { FavRouteStop, RouteEtaItem, NormalisedStop } from "@/shared/types";
+import type {
+  FavRouteStop,
+  RouteEtaItem,
+  NormalisedStop,
+} from "@/shared/types";
 import BusStopModal from "./BusStopModal";
 import type { SelectedStopInfo } from "@/shared/types";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
@@ -41,12 +45,18 @@ const CO_LABEL: Record<string, string> = {
 
 // ── Route stop list fetcher (for prev/next navigation) ───────────
 
-async function fetchRouteStopsForFav(stop: FavRouteStop): Promise<NormalisedStop[]> {
+async function fetchRouteStopsForFav(
+  stop: FavRouteStop,
+): Promise<NormalisedStop[]> {
   if (stop.company === "KMB") {
-    const res = await fetch(`/api/kmb-route?route=${stop.route}&type=${stop.dir}`);
+    const res = await fetch(
+      `/api/kmb-route?route=${stop.route}&type=${stop.dir}`,
+    );
     if (!res.ok) return [];
     const json = await res.json();
-    const stopIds: string[] = (json.stops ?? []).map((s: Record<string, unknown>) => s.stop as string);
+    const stopIds: string[] = (json.stops ?? []).map(
+      (s: Record<string, unknown>) => s.stop as string,
+    );
     return Promise.all(
       stopIds.map((id, i) =>
         fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${id}`, {
@@ -93,7 +103,9 @@ async function fetchRouteStopsForFav(stop: FavRouteStop): Promise<NormalisedStop
     }));
   }
   if (stop.company === "MTRBUS") {
-    const res = await fetch(`/api/mtr-bus-route?routeName=${encodeURIComponent(stop.route)}&lang=zh`);
+    const res = await fetch(
+      `/api/mtr-bus-route?routeName=${encodeURIComponent(stop.route)}&lang=zh`,
+    );
     if (!res.ok) return [];
     const json = await res.json();
     if (!json.busStop || !Array.isArray(json.busStop)) return [];
@@ -311,14 +323,20 @@ interface FavStopCardProps {
   onRemove: (stop: FavRouteStop) => void;
 }
 
-const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onRemove }) => {
+const FavStopCard: React.FC<FavStopCardProps> = ({
+  stop,
+  showRemove = false,
+  onRemove,
+}) => {
   const { t } = useLocale();
   const [etas, setEtas] = useState<RouteEtaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const [modalOpen, setModalOpen] = useState(false);
   const [routeStops, setRouteStops] = useState<NormalisedStop[]>([]);
-  const [currentModal, setCurrentModal] = useState<SelectedStopInfo | null>(null);
+  const [currentModal, setCurrentModal] = useState<SelectedStopInfo | null>(
+    null,
+  );
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stopsLoadedRef = useRef(false);
@@ -397,7 +415,10 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onR
   const handleNavigate = useCallback(
     async (info: SelectedStopInfo) => {
       setCurrentModal(info); // renders immediately with whatever etas it carries
-      const newEtas = await fetchSingleStopEtas({ ...stop, stopId: info.stopId });
+      const newEtas = await fetchSingleStopEtas({
+        ...stop,
+        stopId: info.stopId,
+      });
       setCurrentModal((prev) =>
         prev?.stopId === info.stopId ? { ...prev, etas: newEtas } : prev,
       );
@@ -419,7 +440,10 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onR
     name_en: s.name_en,
     lat: s.lat,
     long: s.long,
-    etas: s.id === (currentModal?.stopId ?? stop.stopId) ? (currentModal?.etas ?? []) : [],
+    etas:
+      s.id === (currentModal?.stopId ?? stop.stopId)
+        ? (currentModal?.etas ?? [])
+        : [],
     company: stop.company,
     route: stop.route,
     dest_tc: stop.dest_tc,
@@ -442,7 +466,9 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onR
           marginBottom: "8px",
           cursor: "pointer",
         }}
-        onClick={() => { void handleOpenModal(); }}
+        onClick={() => {
+          void handleOpenModal();
+        }}
         whileTap={{ scale: 0.985 }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -453,13 +479,29 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onR
               color: textColor,
               borderRadius: "6px",
               padding: "3px 9px",
-              fontSize: "12px",
+              fontSize: "22px",
               fontWeight: 800,
-              letterSpacing: "0.06em",
+              // letterSpacing: "0.06em",
               flexShrink: 0,
             }}
           >
-            {stop.route}
+            {/[A-Z]$/.test(stop.route) ? (
+              <>
+                <span>{stop.route.slice(0, -1)}</span>
+                <span
+                  style={{
+                    fontSize: "0.75em",
+                    fontWeight: 800,
+                    marginLeft: "1px",
+                    lineHeight: 1,
+                  }}
+                >
+                  {stop.route.slice(-1)}
+                </span>
+              </>
+            ) : (
+              stop.route
+            )}
           </span>
 
           {/* Stop name + dest */}
@@ -497,7 +539,8 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onR
               >
                 {label}
               </span>
-              <span className="display-8">{t("common.towards")}</span> {stop.dest_tc}
+              <span className="display-8">{t("common.towards")}</span>{" "}
+              {stop.dest_tc}
             </div>
           </div>
 

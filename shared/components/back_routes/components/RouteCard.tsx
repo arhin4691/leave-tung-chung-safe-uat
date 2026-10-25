@@ -429,10 +429,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
 
   return (
     <>
-      <motion.div
-        layout
-        className={classes.card}
-      >
+      <motion.div layout className={classes.card}>
         {/* ?? Header / collapse toggle ??????????????? */}
         <motion.div
           whileTap={{ scale: 0.99 }}
@@ -454,13 +451,29 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
               color: pill.text,
               borderRadius: "6px",
               padding: "3px 9px",
-              fontSize: "12px",
+              fontSize: "22px",
               fontWeight: 800,
-              letterSpacing: "0.06em",
+              // letterSpacing: "0.06em",
               flexShrink: 0,
             }}
           >
-            {entry.route}
+            {/[A-Z]$/.test(entry.route) ? (
+              <>
+                <span>{entry.route.slice(0, -1)}</span>
+                <span
+                  style={{
+                    fontSize: "0.75em",
+                    fontWeight: 800,
+                    marginLeft: "1px",
+                    lineHeight: 1,
+                  }}
+                >
+                  {entry.route.slice(-1)}
+                </span>
+              </>
+            ) : (
+              entry.route
+            )}
           </span>
 
           {/* Route info */}
@@ -475,7 +488,8 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
               }}
               className="display-7"
             >
-              <span className="display-8">{t("common.towards")}</span> {entry.dest_tc}
+              <span className="display-8">{t("common.towards")}</span>{" "}
+              {entry.dest_tc}
             </div>
             <div
               style={{
