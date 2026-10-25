@@ -77,53 +77,92 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Nearby KMB stop IDs discovered via proximity lookup.
-  // Populated once on mount; reused on every ETA refresh.
+  // Nearby operator stops discovered once and reused on every ETA refresh.
   const nearbyKmbIdsRef = useRef<string[]>([]);
+  const nearbyCtbStopsRef = useRef<Array<{ stopId: string; routes: string[] }>>([]);
+  const [nearbyLookupComplete, setNearbyLookupComplete] = useState(false);
 
   // ── One-time proximity lookup ────────────────────────────────
-  // In Hong Kong, KMB and CTB sometimes register separate stop IDs for
-  // the same physical pole. A direct KMB query with a CTB stop ID would
-  // miss those KMB routes. We search within 80 m at mount time and cache
-  // the discovered KMB stop IDs for inclusion in every ETA refresh.
   useEffect(() => {
+    nearbyKmbIdsRef.current = [];
+    nearbyCtbStopsRef.current = [];
+
     if (
-      props.company !== "ctb" || // only needed for CTB — KMB already gives full cross-operator data
+      (props.company !== "kmb" && props.company !== "ctb") ||
       !props.stopId ||
       !props.lat ||
       !props.long
-    )
+    ) {
+      setNearbyLookupComplete(true);
       return;
+    }
 
-    fetch(
-      `/api/nearby-stops?lat=${props.lat}&lng=${props.long}&excludeStopId=${encodeURIComponent(props.stopId)}`
-    )
-      .then((r) => (r.ok ? r.json() : { stops: [] }))
-      .then((j) => {
-        const kmbIds = (j.stops ?? [])
-          .filter((s: { company: string }) => s.company === "KMB")
-          .map((s: { stopId: string }) => s.stopId);
-        if (kmbIds.length > 0) {
-          nearbyKmbIdsRef.current = kmbIds;
+    let cancelled = false;
+    setNearbyLookupComplete(false);
+
+    fetch(`/api/nearby-stops?lat=${props.lat}&lng=${props.long}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Nearby-stop lookup returned ${response.status}`);
         }
+        return response.json();
       })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.stopId, props.lat, props.long]);
+      .then((j) => {
+        if (cancelled) return;
+        const stops = (j.stops ?? []) as Array<{
+          stopId: string;
+          company: string;
+          routes?: Array<{ route: string }>;
+        }>;
+        nearbyKmbIdsRef.current = [
+          ...new Set(
+            stops
+              .filter(
+                (stop) =>
+                  stop.company === "KMB" && stop.stopId !== props.stopId,
+              )
+              .map((stop) => stop.stopId),
+          ),
+        ];
+        nearbyCtbStopsRef.current = stops
+          .filter((stop) => stop.company === "CTB")
+          .map((stop) => ({
+            stopId: stop.stopId,
+            routes: [
+              ...new Set(
+                (stop.routes ?? [])
+                  .map((route) => route.route)
+                  .filter(Boolean),
+              ),
+            ],
+          }))
+          .filter((stop) => stop.routes.length > 0);
+        setNearbyLookupComplete(true);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        console.error("[BusStopEtaView] Nearby-stop lookup failed:", error);
+        setNearbyLookupComplete(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [props.company, props.stopId, props.lat, props.long]);
 
   const fetchEtas = useCallback(async () => {
     if (props.company === "nlb" || !props.stopId) return;
+    if (
+      (props.company === "kmb" || props.company === "ctb") &&
+      props.lat &&
+      props.long &&
+      !nearbyLookupComplete
+    ) {
+      return;
+    }
     setIsLoading(true);
     try {
-      // KMB and CTB share the same stop ID registry — always fetch both
-      // regardless of which operator opened this view.
-      const targets: string[] =
-        props.company === "kmb" || props.company === "ctb"
-          ? ["kmb", "ctb"]
-          : [props.company];
-
-      // Direct queries for this stop ID
-      const directFetches = targets.map((co) =>
+      const directFetches = ["kmb"].map((co) =>
         fetch(
           `/api/stop-all-eta?stopId=${encodeURIComponent(props.stopId!)}&company=${co}`,
           { cache: "no-store" }
@@ -132,21 +171,36 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
           .catch(() => ({ rows: [] }))
       );
 
-      // Proximity queries — fetch KMB+CTB for each nearby KMB stop ID.
-      // These handle the case where the CTB pole has a different stop ID
-      // than the adjacent KMB pole at the same physical location.
-      const nearbyFetches = nearbyKmbIdsRef.current.flatMap((sid) =>
-        ["kmb", "ctb"].map((co) =>
+      const nearbyKmbFetches = nearbyKmbIdsRef.current.map((sid) =>
           fetch(
-            `/api/stop-all-eta?stopId=${encodeURIComponent(sid)}&company=${co}`,
+            `/api/stop-all-eta?stopId=${encodeURIComponent(sid)}&company=kmb`,
             { cache: "no-store" }
           )
             .then((r) => (r.ok ? r.json() : { rows: [] }))
             .catch(() => ({ rows: [] }))
-        )
       );
 
-      const allResponses = await Promise.all([...directFetches, ...nearbyFetches]);
+      const ctbStops = nearbyCtbStopsRef.current.length > 0
+        ? nearbyCtbStopsRef.current
+        : props.company === "ctb" && props.currentRoute
+          ? [{ stopId: props.stopId, routes: [props.currentRoute] }]
+          : [];
+      const nearbyCtbFetches = ctbStops.map((stop) => {
+        const params = new URLSearchParams({
+          stopId: stop.stopId,
+          company: "ctb",
+          routes: stop.routes.join(","),
+        });
+        return fetch(`/api/stop-all-eta?${params}`, { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : { rows: [] }))
+          .catch(() => ({ rows: [] }));
+      });
+
+      const allResponses = await Promise.all([
+        ...directFetches,
+        ...nearbyKmbFetches,
+        ...nearbyCtbFetches,
+      ]);
 
       // Merge + deduplicate by (co|route|dir)
       const seen = new Set<string>();
@@ -169,7 +223,14 @@ const BusStopEtaView: React.FC<BusStopEtaViewProps> = (props) => {
       setIsLoading(false);
       setHasFetched(true);
     }
-  }, [props.stopId, props.company]);
+  }, [
+    nearbyLookupComplete,
+    props.company,
+    props.currentRoute,
+    props.lat,
+    props.long,
+    props.stopId,
+  ]);
 
   // Initial fetch + auto-refresh
   useEffect(() => {

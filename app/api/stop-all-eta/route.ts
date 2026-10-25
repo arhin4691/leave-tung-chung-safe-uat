@@ -2,8 +2,10 @@
  * /api/stop-all-eta ??Fetch all ETAs at a bus stop from KMB, CTB, or NLB
  *
  * GET /api/stop-all-eta?stopId=<id>&company=kmb|ctb|nlb
+ * CTB requests also require a comma-separated routes param.
  *
  * Calls the stop-level ETA endpoint from the respective operator,
+ * except CTB, whose ETA API requires a route for each stop request.
  * groups results by route+direction and returns up to 3 ETA slots each.
  *
  * Response: { rows: StopEtaRow[], timestamp: string }
@@ -67,6 +69,7 @@ export async function GET(req: NextRequest) {
   const stopId = searchParams.get("stopId");
   const company = searchParams.get("company");
   const routeIdsParam = searchParams.get("routeIds");
+  const routesParam = searchParams.get("routes");
 
   if (!stopId || !company) {
     return NextResponse.json(
@@ -94,14 +97,44 @@ export async function GET(req: NextRequest) {
         data = (json.data ?? []) as Record<string, unknown>[];
       }
     } else if (company === "ctb") {
-      const res = await fetch(
-        `${CTB_BASE}/stop-eta/CTB/${encodeURIComponent(stopId)}`,
-        { cache: "no-store" }
-      );
-      if (res.ok) {
-        const json = await res.json();
-        data = (json.data ?? []) as Record<string, unknown>[];
+      const routes = [
+        ...new Set(
+          (routesParam ?? "")
+            .split(",")
+            .map((route) => route.trim())
+            .filter(Boolean),
+        ),
+      ];
+      if (routes.length === 0 || routes.some((route) => !/^[a-z0-9]+$/i.test(route))) {
+        return NextResponse.json(
+          { error: "CTB requests require a valid routes param" },
+          { status: 400 },
+        );
       }
+      if (routes.length > 40) {
+        return NextResponse.json(
+          { error: "Too many CTB routes in one request (max 40)" },
+          { status: 400 },
+        );
+      }
+
+      const results = await Promise.all(
+        routes.map(async (route) => {
+          const res = await fetch(
+            `${CTB_BASE}/eta/CTB/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`,
+            { cache: "no-store" },
+          );
+          if (!res.ok) {
+            console.error(
+              `CTB ETA request failed for stop ${stopId}, route ${route}: ${res.status}`,
+            );
+            return [];
+          }
+          const json = await res.json();
+          return (json.data ?? []) as Record<string, unknown>[];
+        }),
+      );
+      data = results.flat();
     } else if (company === "nlb") {
       // Use static reverse-stop lookup to find all NLB routes at this stop,
       // then fetch live ETAs for each route in parallel.

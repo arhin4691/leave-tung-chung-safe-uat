@@ -27,6 +27,7 @@ import { toggleFavStop, isFavStop, getFavStops } from "@/shared/util/favStops";
 import { MTR_BUS_STOP_NAMES } from "@/shared/data/MTR_BUS_STOP_NAMES";
 import { MTR_BUS_STOP_LOCATIONS } from "@/shared/data/MTR_BUS_STOP_LOCATIONS";
 import { useLocale } from "@/shared/context/locale-context";
+import classes from "./RouteCard.module.css";
 
 const ETA_POLL_MS = 15_000;
 
@@ -375,6 +376,19 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
   }, [entry, etas, initialStopId, stops]);
 
   useEffect(() => {
+    const stopId = selectedStop?.stopId;
+    if (!stopId) return;
+    const latestEtas = etas[stopId];
+    if (!latestEtas) return;
+
+    setSelectedStop((current) =>
+      current && current.stopId === stopId && current.etas !== latestEtas
+        ? { ...current, etas: latestEtas }
+        : current,
+    );
+  }, [etas, selectedStop?.stopId]);
+
+  useEffect(() => {
     if (open && stops.length > 0) {
       // For MTRBUS, initial etas already set in loadStops; still poll on interval
       if (entry.company !== "MTRBUS") {
@@ -405,13 +419,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
     <>
       <motion.div
         layout
-        style={{
-          borderRadius: "16px",
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          overflow: "hidden",
-          marginBottom: "10px",
-        }}
+        className={classes.card}
       >
         {/* ?? Header / collapse toggle ??????????????? */}
         <motion.div
@@ -645,6 +653,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
       {/* ?? Stop detail modal ???????????????????????? */}
       <BusStopModal
         info={selectedStop}
+        etaLoading={loadingEta}
         onClose={() => setSelectedStop(null)}
         stopList={stops.map((stop) => ({
           stopId: stop.id,
@@ -658,6 +667,9 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
           dest_tc: entry.dest_tc,
         }))}
         onNavigate={setSelectedStop}
+        routeDirection={entry.dir}
+        routeId={entry.routeId}
+        serviceType={entry.serviceType}
       />
     </>
   );

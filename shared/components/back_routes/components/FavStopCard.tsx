@@ -569,6 +569,9 @@ const FavStopCard: React.FC<FavStopCardProps> = ({ stop, showRemove = false, onR
         }}
         stopList={stopList.length > 0 ? stopList : undefined}
         onNavigate={handleNavigate}
+        routeDirection={stop.dir}
+        routeId={stop.routeId}
+        serviceType={stop.serviceType}
       />
     </>
   );

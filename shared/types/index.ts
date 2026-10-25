@@ -151,6 +151,21 @@ export interface SelectedStopInfo {
   dest_tc: string;
 }
 
+export type RouteShapeCoordinate = [longitude: number, latitude: number];
+
+export type RouteShapeGeometry =
+  | { type: "LineString"; coordinates: RouteShapeCoordinate[] }
+  | { type: "MultiLineString"; coordinates: RouteShapeCoordinate[][] };
+
+export interface BusRouteShapeCollection {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    properties: Record<string, unknown>;
+    geometry: RouteShapeGeometry;
+  }>;
+}
+
 /** One route + direction tuple used across the revamped page */
 export interface BusRouteEntry {
   /** Route number e.g. "E33", "A11", "K12" */

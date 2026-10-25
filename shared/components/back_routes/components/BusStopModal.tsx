@@ -228,11 +228,15 @@ const EtaSlot: React.FC<EtaSlotProps> = memo(({ item, nowSec, isFirst }) => {
 
 interface BusStopModalProps {
   info: SelectedStopInfo | null;
+  etaLoading?: boolean;
   onClose: () => void;
   /** Full ordered stop list for the route — enables ‹ / › navigation */
   stopList?: SelectedStopInfo[];
   /** Called when the user taps a navigation arrow */
   onNavigate?: (info: SelectedStopInfo) => void;
+  routeDirection?: "I" | "O";
+  routeId?: string;
+  serviceType?: string;
 }
 
 interface NearbyRoute {
@@ -262,20 +266,82 @@ type OtherRoute = StopEtaRow & {
   serviceType?: string;
 };
 
-const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopList, onNavigate }) => {
+interface SectionSwipe {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  startOffset: number;
+  startIndex: number;
+  axis: "x" | "y" | null;
+  lastX: number;
+  lastAt: number;
+}
+
+type LoadStatus = "idle" | "loading" | "loaded" | "error";
+
+interface KeyedLoadStatus {
+  key: string;
+  status: LoadStatus;
+}
+
+const SECTION_COUNT = 3;
+
+const BusStopModalContent: React.FC<BusStopModalProps> = ({
+  info,
+  etaLoading = false,
+  onClose,
+  stopList,
+  onNavigate,
+  routeDirection,
+  routeId,
+  serviceType,
+}) => {
   const { t } = useLocale();
   const router = useRouter();
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   const [otherRoutes, setOtherRoutes] = useState<OtherRoute[]>([]);
-  const [nearbyError, setNearbyError] = useState(false);
+  const [otherRoutesKey, setOtherRoutesKey] = useState("");
+  const [nearbyLoad, setNearbyLoad] = useState<KeyedLoadStatus>({
+    key: "",
+    status: "idle",
+  });
+  const [etaLoad, setEtaLoad] = useState<KeyedLoadStatus>({
+    key: "",
+    status: "idle",
+  });
+  const nearbyLoadedKeyRef = useRef<string | null>(null);
+  const nearbyRequestKeyRef = useRef<string | null>(null);
+  const etaLoadedKeyRef = useRef<string | null>(null);
+  const etaRequestKeyRef = useRef<string | null>(null);
   const slidesRef = useRef<HTMLDivElement>(null);
   const [activeSection, setActiveSection] = useState(0);
+  const sectionIndexRef = useRef(0);
+  const trackOffsetRef = useRef(0);
+  const swipeRef = useRef<SectionSwipe | null>(null);
+  const suppressClickRef = useRef(false);
+  const currentStopId = info?.stopId ?? "";
+  const currentCompany = info?.company ?? "";
+  const currentRoute = info?.route ?? "";
+  const currentLatitude = info?.lat;
+  const currentLongitude = info?.long;
+  const stopKey = info
+    ? [
+        currentCompany,
+        currentStopId,
+        currentRoute,
+        currentLatitude ?? "",
+        currentLongitude ?? "",
+      ].join("|")
+    : "";
+  const currentOtherRoutes =
+    otherRoutesKey === stopKey ? otherRoutes : [];
+  const currentNearbyStatus =
+    nearbyLoad.key === stopKey ? nearbyLoad.status : "idle";
+  const currentEtaStatus = etaLoad.key === stopKey ? etaLoad.status : "idle";
 
-  // Reset the pager and each panel's vertical scroll whenever the stop changes.
+  // Preserve the selected panel while resetting its content scroll on stop changes.
   useEffect(() => {
-    setActiveSection(0);
     if (!slidesRef.current) return;
-    slidesRef.current.scrollLeft = 0;
     slidesRef.current
       .querySelectorAll<HTMLElement>("[data-stop-slide]")
       .forEach((slide) => {
@@ -285,89 +351,26 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
 
   useEffect(() => {
     const track = slidesRef.current;
-    if (!track) return;
+    const viewport = track?.parentElement;
+    if (!track || !viewport) return;
 
-    let touchStart: { x: number; y: number; scrollLeft: number } | null = null;
-    let isHorizontalSwipe = false;
-
-    const handleTouchStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1) {
-        touchStart = null;
-        isHorizontalSwipe = false;
-        return;
-      }
-
-      const touch = event.touches[0];
-      touchStart = {
-        x: touch.clientX,
-        y: touch.clientY,
-        scrollLeft: track.scrollLeft,
-      };
-      isHorizontalSwipe = false;
+    const alignTrack = () => {
+      const width = viewport.clientWidth;
+      if (!width) return;
+      const offset = -sectionIndexRef.current * width;
+      trackOffsetRef.current = offset;
+      track.style.transform = `translate3d(${offset}px, 0, 0)`;
     };
 
-    const handleTouchMove = (event: TouchEvent) => {
-      if (!touchStart || event.touches.length !== 1) return;
-      const touch = event.touches[0];
-      const deltaX = touch.clientX - touchStart.x;
-      const deltaY = touch.clientY - touchStart.y;
+    alignTrack();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", alignTrack);
+      return () => window.removeEventListener("resize", alignTrack);
+    }
 
-      if (
-        !isHorizontalSwipe &&
-        Math.abs(deltaX) > 10 &&
-        Math.abs(deltaX) > Math.abs(deltaY)
-      ) {
-        isHorizontalSwipe = true;
-      }
-      if (!isHorizontalSwipe) return;
-
-      if (event.cancelable) event.preventDefault();
-      event.stopPropagation();
-      track.scrollLeft = touchStart.scrollLeft - deltaX;
-    };
-
-    const finishTouch = () => {
-      if (isHorizontalSwipe && track.clientWidth > 0) {
-        const index = Math.max(
-          0,
-          Math.min(
-            2,
-            Math.round(track.scrollLeft / track.clientWidth),
-          ),
-        );
-        setActiveSection(index);
-        track.scrollTo({
-          left: index * track.clientWidth,
-          behavior: "smooth",
-        });
-      }
-      touchStart = null;
-      isHorizontalSwipe = false;
-    };
-
-    track.addEventListener("touchstart", handleTouchStart, {
-      capture: true,
-      passive: true,
-    });
-    track.addEventListener("touchmove", handleTouchMove, {
-      capture: true,
-      passive: false,
-    });
-    track.addEventListener("touchend", finishTouch, {
-      capture: true,
-      passive: true,
-    });
-    track.addEventListener("touchcancel", finishTouch, {
-      capture: true,
-      passive: true,
-    });
-
-    return () => {
-      track.removeEventListener("touchstart", handleTouchStart, true);
-      track.removeEventListener("touchmove", handleTouchMove, true);
-      track.removeEventListener("touchend", finishTouch, true);
-      track.removeEventListener("touchcancel", finishTouch, true);
-    };
+    const observer = new ResizeObserver(alignTrack);
+    observer.observe(viewport);
+    return () => observer.disconnect();
   }, []);
 
   // Lock body scroll while modal is open
@@ -382,112 +385,93 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
     return () => clearInterval(t);
   }, []);
 
-  // Use the daily cross-operator stop map to find routes even when operators
-  // assign different IDs to the same physical stop.
+  // Load route numbers only when the same-stop routes panel is opened.
   useEffect(() => {
-    if (!info) return;
-    setOtherRoutes([]);
-    setNearbyError(false);
+    if (!stopKey || activeSection !== 2) return;
+    if (
+      nearbyLoadedKeyRef.current === stopKey ||
+      nearbyRequestKeyRef.current === stopKey
+    ) {
+      return;
+    }
+
+    const requestKey = stopKey;
+    const controller = new AbortController();
     let cancelled = false;
+    nearbyRequestKeyRef.current = requestKey;
+    setOtherRoutesKey(requestKey);
+    setOtherRoutes([]);
+    setNearbyLoad({ key: requestKey, status: "loading" });
+    setEtaLoad({ key: requestKey, status: "idle" });
 
     async function load() {
       try {
-        const company = info.company.toLowerCase();
-        const directRowsPromise: Promise<OtherRoute[]> =
-          company === "mtrbus"
-            ? Promise.resolve([])
-            : fetch(
-                `/api/stop-all-eta?stopId=${encodeURIComponent(info.stopId)}&company=${company}`,
-              )
-                .then((response) =>
-                  response.ok ? response.json() : { rows: [] },
-                )
-                .then((json) =>
-                  ((json.rows ?? []) as StopEtaRow[]).map((row) => ({
-                    ...row,
-                    stopId: info.stopId,
-                    lat: info.lat,
-                    long: info.long,
-                  })),
-                )
-                .catch(() => []);
+        let routeRows: OtherRoute[] = [];
+        const hasCoords =
+          currentLatitude !== undefined &&
+          currentLongitude !== undefined &&
+          currentLatitude !== "" &&
+          currentLongitude !== "";
 
-        const hasCoords = info.lat !== undefined && info.long !== undefined;
-        let nearbyStops: NearbyStop[] = [];
         if (hasCoords) {
           const params = new URLSearchParams({
-            lat: info.lat!,
-            lng: info.long!,
-            excludeStopId: info.stopId,
-            excludeCompany: info.company,
+            lat: String(currentLatitude),
+            lng: String(currentLongitude),
           });
-          const response = await fetch(`/api/nearby-stops?${params}`);
+          const response = await fetch(`/api/nearby-stops?${params}`, {
+            signal: controller.signal,
+          });
           if (!response.ok) {
             throw new Error(`Nearby-stop lookup returned ${response.status}`);
           }
           const json = (await response.json()) as { stops?: NearbyStop[] };
-          nearbyStops = json.stops ?? [];
+          routeRows = (json.stops ?? []).flatMap((stop) =>
+            stop.routes.map((route) => ({
+              route: route.route,
+              co: route.company,
+              dir: route.dir,
+              dest_tc: route.dest_tc,
+              dest_en: route.dest_en,
+              etas: [],
+              stopId: stop.stopId,
+              lat: String(stop.lat),
+              long: String(stop.lng),
+              routeId: route.routeId,
+              serviceType: route.serviceType,
+            })),
+          );
+        } else if (
+          currentCompany === "KMB" ||
+          currentCompany === "NLB"
+        ) {
+          const response = await fetch(
+            `/api/stop-all-eta?stopId=${encodeURIComponent(currentStopId)}&company=${currentCompany.toLowerCase()}`,
+            { signal: controller.signal },
+          );
+          if (!response.ok) {
+            throw new Error(
+              `Same-stop route lookup returned ${response.status}`,
+            );
+          }
+          const json = (await response.json()) as { rows?: StopEtaRow[] };
+          routeRows = (json.rows ?? []).map((row) => ({
+            ...row,
+            stopId: currentStopId,
+            lat: currentLatitude,
+            long: currentLongitude,
+          }));
+          etaLoadedKeyRef.current = requestKey;
+          setEtaLoad({ key: requestKey, status: "loaded" });
         }
-
-        const [sameIdRows, nearbyRows] = await Promise.all([
-          directRowsPromise,
-          Promise.all(
-            nearbyStops.map(async (stop) => {
-              let liveRows: StopEtaRow[] = [];
-              if (stop.company !== "MTRBUS") {
-                const operator = stop.company.toLowerCase();
-                const routeIds = stop.routes
-                  .map((route) => route.routeId)
-                  .filter((routeId): routeId is string => !!routeId);
-                const params = new URLSearchParams({
-                  stopId: stop.stopId,
-                  company: operator,
-                });
-                if (operator === "nlb" && routeIds.length > 0) {
-                  params.set("routeIds", [...new Set(routeIds)].join(","));
-                }
-                const response = await fetch(`/api/stop-all-eta?${params}`);
-                if (response.ok) {
-                  const json = (await response.json()) as {
-                    rows?: StopEtaRow[];
-                  };
-                  liveRows = json.rows ?? [];
-                }
-              }
-
-              return stop.routes.map((route) => {
-                const live = liveRows.find(
-                  (row) =>
-                    row.co.toUpperCase() === route.company &&
-                    row.route === route.route &&
-                    row.dir === route.dir,
-                );
-                return {
-                  route: route.route,
-                  co: route.company,
-                  dir: route.dir,
-                  dest_tc: route.dest_tc || live?.dest_tc || "",
-                  dest_en: route.dest_en || live?.dest_en || "",
-                  etas: live?.etas ?? [],
-                  stopId: stop.stopId,
-                  lat: String(stop.lat),
-                  long: String(stop.lng),
-                  routeId: route.routeId ?? live?.routeId,
-                  serviceType: route.serviceType ?? live?.serviceType,
-                };
-              });
-            }),
-          ).then((rows) => rows.flat()),
-        ]);
 
         if (cancelled) return;
 
         const deduplicated = new Map<string, OtherRoute>();
-        for (const row of [...sameIdRows, ...nearbyRows]) {
+        for (const row of routeRows) {
           const key = `${row.co.toUpperCase()}|${row.route}|${row.dir}`;
           if (
-            row.co.toUpperCase() === info.company &&
-            row.route === info.route
+            row.co.toUpperCase() === currentCompany &&
+            row.route === currentRoute
           ) {
             continue;
           }
@@ -504,14 +488,175 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
             }),
           ),
         );
+        setOtherRoutesKey(requestKey);
+        nearbyLoadedKeyRef.current = requestKey;
+        setNearbyLoad({ key: requestKey, status: "loaded" });
       } catch (error) {
-        console.error("[BusStopModal] Cross-operator lookup failed:", error);
-        if (!cancelled) setNearbyError(true);
+        if (cancelled) return;
+        console.error("[BusStopModal] Cross-operator route lookup failed:", error);
+        nearbyLoadedKeyRef.current = requestKey;
+        setNearbyLoad({ key: requestKey, status: "error" });
+      } finally {
+        if (
+          !cancelled &&
+          nearbyRequestKeyRef.current === requestKey
+        ) {
+          nearbyRequestKeyRef.current = null;
+        }
       }
     }
+
     void load();
-    return () => { cancelled = true; };
-  }, [info?.stopId, info?.company, info?.route, info?.lat, info?.long]);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (nearbyRequestKeyRef.current === requestKey) {
+        nearbyRequestKeyRef.current = null;
+      }
+    };
+  }, [
+    activeSection,
+    currentCompany,
+    currentLatitude,
+    currentLongitude,
+    currentRoute,
+    currentStopId,
+    stopKey,
+  ]);
+
+  // ETA requests start only after the route-number list has been rendered.
+  useEffect(() => {
+    if (
+      activeSection !== 2 ||
+      !stopKey ||
+      otherRoutesKey !== stopKey ||
+      currentOtherRoutes.length === 0 ||
+      etaLoadedKeyRef.current === stopKey ||
+      etaRequestKeyRef.current === stopKey
+    ) {
+      return;
+    }
+
+    const groups = new Map<string, OtherRoute[]>();
+    for (const row of currentOtherRoutes) {
+      if (row.co.toUpperCase() === "MTRBUS") continue;
+      const key = `${row.co.toUpperCase()}|${row.stopId}`;
+      const group = groups.get(key) ?? [];
+      group.push(row);
+      groups.set(key, group);
+    }
+
+    if (groups.size === 0) {
+      etaLoadedKeyRef.current = stopKey;
+      setEtaLoad({ key: stopKey, status: "loaded" });
+      return;
+    }
+
+    const requestKey = stopKey;
+    const controller = new AbortController();
+    let cancelled = false;
+    etaRequestKeyRef.current = requestKey;
+    setEtaLoad({ key: requestKey, status: "loading" });
+
+    const loadEtas = async () => {
+      const results = await Promise.allSettled(
+        [...groups.entries()].map(async ([groupKey, rows]) => {
+          const company = rows[0].co.toLowerCase();
+          const params = new URLSearchParams({
+            stopId: rows[0].stopId,
+            company,
+          });
+          if (company === "ctb") {
+            const routes = [...new Set(rows.map((row) => row.route))].slice(
+              0,
+              40,
+            );
+            if (routes.length > 0) params.set("routes", routes.join(","));
+          } else if (company === "nlb") {
+            const routeIds = [
+              ...new Set(
+                rows
+                  .map((row) => row.routeId)
+                  .filter((id): id is string => !!id),
+              ),
+            ].slice(0, 40);
+            if (routeIds.length > 0) {
+              params.set("routeIds", routeIds.join(","));
+            }
+          }
+
+          const response = await fetch(`/api/stop-all-eta?${params}`, {
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            throw new Error(`Nearby ETA lookup returned ${response.status}`);
+          }
+          const json = (await response.json()) as { rows?: StopEtaRow[] };
+          return { groupKey, rows: json.rows ?? [] };
+        }),
+      );
+
+      if (cancelled) return;
+
+      const etasByRoute = new Map<string, StopEtaRow>();
+      let hasError = false;
+      for (const result of results) {
+        if (result.status === "rejected") {
+          hasError = true;
+          console.error(
+            "[BusStopModal] Nearby ETA lookup failed:",
+            result.reason,
+          );
+          continue;
+        }
+
+        for (const row of result.value.rows) {
+          etasByRoute.set(
+            `${result.value.groupKey}|${row.route}|${row.dir}`,
+            row,
+          );
+        }
+      }
+
+      setOtherRoutes((rows) =>
+        rows.map((row) => {
+          const live = etasByRoute.get(
+            `${row.co.toUpperCase()}|${row.stopId}|${row.route}|${row.dir}`,
+          );
+          return live
+            ? {
+                ...row,
+                etas: live.etas,
+                routeId: row.routeId ?? live.routeId,
+                serviceType: row.serviceType ?? live.serviceType,
+              }
+            : row;
+        }),
+      );
+      etaLoadedKeyRef.current = requestKey;
+      etaRequestKeyRef.current = null;
+      setEtaLoad({ key: requestKey, status: hasError ? "error" : "loaded" });
+    };
+
+    void loadEtas();
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (etaRequestKeyRef.current === requestKey) {
+        etaRequestKeyRef.current = null;
+        setEtaLoad((current) =>
+          current.key === requestKey && current.status === "loading"
+            ? { key: requestKey, status: "idle" }
+            : current,
+        );
+      }
+    };
+  }, [
+    activeSection,
+    currentOtherRoutes,
+    otherRoutesKey,
+    stopKey,
+  ]);
 
   if (!info) return null;
 
@@ -537,17 +682,124 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
     if (row.serviceType) params.set("serviceType", row.serviceType);
     router.push(`/go_back?${params.toString()}`);
   };
-  const handleSectionScroll = () => {
-    const track = slidesRef.current;
-    if (!track || track.clientWidth === 0) return;
-    const index = Math.round(track.scrollLeft / track.clientWidth);
-    setActiveSection(Math.max(0, Math.min(sectionLabels.length - 1, index)));
-  };
-  const navigateToSection = (index: number) => {
+
+  const moveToSection = (requestedIndex: number) => {
     const track = slidesRef.current;
     if (!track) return;
+    const width = track.parentElement?.clientWidth ?? track.clientWidth;
+    if (width === 0) return;
+
+    const index = Math.max(0, Math.min(SECTION_COUNT - 1, requestedIndex));
+    const offset = -index * width;
+    track.classList.remove(classes.slideTrackDragging);
+    track.style.transition = "";
+    track.style.transform = `translate3d(${offset}px, 0, 0)`;
+    trackOffsetRef.current = offset;
+    sectionIndexRef.current = index;
     setActiveSection(index);
-    track.scrollTo({ left: index * track.clientWidth, behavior: "smooth" });
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) {
+      return;
+    }
+    if (
+      event.target instanceof Element &&
+      event.target.closest("[data-map-gesture]")
+    ) {
+      swipeRef.current = null;
+      return;
+    }
+    swipeRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startOffset: trackOffsetRef.current,
+      startIndex: sectionIndexRef.current,
+      axis: null,
+      lastX: event.clientX,
+      lastAt: performance.now(),
+    };
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const swipe = swipeRef.current;
+    const track = event.currentTarget;
+    if (!swipe || swipe.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - swipe.startX;
+    const deltaY = event.clientY - swipe.startY;
+    if (!swipe.axis) {
+      if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 8) return;
+      if (Math.abs(deltaX) <= Math.abs(deltaY)) {
+        swipe.axis = "y";
+        return;
+      }
+      swipe.axis = "x";
+      track.classList.add(classes.slideTrackDragging);
+      track.setPointerCapture(event.pointerId);
+    }
+    if (swipe.axis !== "x") return;
+
+    event.preventDefault();
+    const width = track.parentElement?.clientWidth ?? track.clientWidth;
+    if (width === 0) return;
+    const minOffset = -(SECTION_COUNT - 1) * width;
+    const offset = Math.max(minOffset, Math.min(0, swipe.startOffset + deltaX));
+    trackOffsetRef.current = offset;
+    track.style.transform = `translate3d(${offset}px, 0, 0)`;
+
+    const now = performance.now();
+    if (now - swipe.lastAt > 0) {
+      swipe.lastX = event.clientX;
+      swipe.lastAt = now;
+    }
+  };
+
+  const finishPointerGesture = (
+    event: React.PointerEvent<HTMLDivElement>,
+    allowVelocity: boolean,
+  ) => {
+    const swipe = swipeRef.current;
+    const track = event.currentTarget;
+    if (!swipe || swipe.pointerId !== event.pointerId) return;
+
+    if (swipe.axis === "x") {
+      const width = track.parentElement?.clientWidth ?? track.clientWidth;
+      const displacement = trackOffsetRef.current - swipe.startOffset;
+      const elapsed = performance.now() - swipe.lastAt;
+      const velocity =
+        allowVelocity && elapsed > 0
+          ? (event.clientX - swipe.lastX) / elapsed
+          : 0;
+      const threshold = Math.max(36, width * 0.18);
+      let index = swipe.startIndex;
+
+      if (Math.abs(displacement) >= threshold || Math.abs(velocity) > 0.45) {
+        index += displacement < 0 || velocity < 0 ? 1 : -1;
+      }
+
+      suppressClickRef.current = true;
+      requestAnimationFrame(() => {
+        suppressClickRef.current = false;
+      });
+      if (track.hasPointerCapture(event.pointerId)) {
+        track.releasePointerCapture(event.pointerId);
+      }
+      moveToSection(index);
+    }
+
+    swipeRef.current = null;
+  };
+
+  const navigateToSection = (index: number) => {
+    moveToSection(index);
+  };
+  const handleClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!suppressClickRef.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClickRef.current = false;
   };
 
   // Single motion root → AnimatePresence tracks exactly one child, no "multiple children" warning.
@@ -791,12 +1043,16 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
             </div>
           </div>
 
-          <div
-            ref={slidesRef}
-            className={classes.slideTrack}
-            onScroll={handleSectionScroll}
-            aria-label={t("bus.stopDetailsSections")}
-          >
+          <div className={classes.slideViewport} aria-label={t("bus.stopDetailsSections")}>
+            <div
+              ref={slidesRef}
+              className={classes.slideTrack}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={(event) => finishPointerGesture(event, true)}
+              onPointerCancel={(event) => finishPointerGesture(event, false)}
+              onClickCapture={handleClickCapture}
+            >
             <section
               id="stop-section-0"
               className={classes.slide}
@@ -819,6 +1075,8 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
 
               {validEtas.length === 0 ? (
                 <div
+                  role={etaLoading ? "status" : undefined}
+                  aria-live={etaLoading ? "polite" : undefined}
                   style={{
                     textAlign: "center",
                     padding: "28px 0",
@@ -826,7 +1084,7 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
                     fontSize: "14px",
                   }}
                 >
-                  {t("bus.noEtaData")}
+                  {etaLoading ? t("common.updating") : t("bus.noEtaData")}
                 </div>
               ) : (
                 validEtas.slice(0, 3).map((item, i) => (
@@ -851,6 +1109,14 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
                 long={info.long}
                 title={info.name_tc}
                 active={activeSection === 1}
+                route={info.route}
+                company={info.company}
+                direction={routeDirection}
+                routeId={routeId}
+                serviceType={serviceType}
+                destination={info.dest_tc}
+                currentStopId={info.stopId}
+                routeStops={stopList}
               />
             </section>
 
@@ -873,19 +1139,34 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
                 >
                   {t("bus.otherRoutesTitle")}
                 </div>
-                {nearbyError && (
+                {currentNearbyStatus === "loading" && (
                   <div
                     role="status"
+                    aria-live="polite"
                     style={{
                       color: "rgba(255,255,255,0.45)",
                       fontSize: "12px",
                       marginBottom: "10px",
                     }}
                   >
-                    {t("bus.nearbyRoutesError" as TranslationKey)}
+                    {t("bus.nearbyRoutesLoading")}
                   </div>
                 )}
-                {otherRoutes.length === 0 && !nearbyError && (
+                {currentNearbyStatus === "error" && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    style={{
+                      color: "rgba(255,255,255,0.45)",
+                      fontSize: "12px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    {t("bus.nearbyRoutesError")}
+                  </div>
+                )}
+                {currentNearbyStatus === "loaded" &&
+                  currentOtherRoutes.length === 0 && (
                   <div
                     style={{
                       color: "rgba(255,255,255,0.3)",
@@ -897,7 +1178,34 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
                     {t("bus.noOtherRoutes")}
                   </div>
                 )}
-                {otherRoutes.map((row, idx) => {
+                {currentEtaStatus === "loading" &&
+                  currentOtherRoutes.length > 0 && (
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      style={{
+                        color: "rgba(255,255,255,0.45)",
+                        fontSize: "12px",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      {t("bus.nearbyEtaLoading")}
+                    </div>
+                  )}
+                {currentEtaStatus === "error" && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    style={{
+                      color: "rgba(255,255,255,0.45)",
+                      fontSize: "12px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    {t("bus.nearbyEtaError")}
+                  </div>
+                )}
+                {currentOtherRoutes.map((row, idx) => {
                   const coColor = CO_COLOR[row.co.toUpperCase()] ?? "#555";
                   const coText = CO_TEXT[row.co.toUpperCase()] ?? "#fff";
                   const isMtrBus = row.co.toUpperCase() === "MTRBUS";
@@ -1034,6 +1342,7 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
                 })}
               </div>
             </section>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -1041,7 +1350,16 @@ const BusStopModalContent: React.FC<BusStopModalProps> = ({ info, onClose, stopL
   );
 };
 
-const BusStopModal: React.FC<BusStopModalProps> = ({ info, onClose, stopList, onNavigate }) => {
+const BusStopModal: React.FC<BusStopModalProps> = ({
+  info,
+  etaLoading,
+  onClose,
+  stopList,
+  onNavigate,
+  routeDirection,
+  routeId,
+  serviceType,
+}) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
@@ -1058,9 +1376,13 @@ const BusStopModal: React.FC<BusStopModalProps> = ({ info, onClose, stopList, on
         <BusStopModalContent
           key="content"
           info={info}
+          etaLoading={etaLoading}
           onClose={onClose}
           stopList={stopList}
           onNavigate={onNavigate}
+          routeDirection={routeDirection}
+          routeId={routeId}
+          serviceType={serviceType}
         />
       )}
     </AnimatePresence>,

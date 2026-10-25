@@ -19,9 +19,6 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-/** Anti-flash: apply saved theme before first paint (dark default). */
-const themeScript = `(function(){try{var t=localStorage.getItem('themeV2');if(t!=='light'&&t!=='dark')t='dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`;
-
 export default function RootLayout({
   children,
 }: {
@@ -57,9 +54,8 @@ export default function RootLayout({
       </head>
       <body>
         <Script
-          id="theme-init"
+          src="/theme-init.js"
           strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themeScript }}
         />
         <Script
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3107922640573943"

@@ -361,17 +361,15 @@ const BusFavList: React.FC<BusFavListProps> = (props) => {
             </Grid>
           </Grid>
 
-          {typeof window !== "undefined"
-            ? !window.localStorage.getItem("likedBack") &&
-              !window.localStorage.getItem("likedBus") &&
-              !window.localStorage.getItem("likedNlb") &&
-              routeStopData.length === 0 && (
-                <div className="badge-reverse center p-1 m-1">
-                  😔
-                  {t("fav.youHaveNoFav")}
-                </div>
-              )
-            : false}
+          {data.length === 0 &&
+            backDataArray.length === 0 &&
+            nlbData.length === 0 &&
+            routeStopData.length === 0 && (
+              <div className="badge-reverse center p-1 m-1">
+                😔
+                {t("fav.youHaveNoFav")}
+              </div>
+            )}
 
           {/* ── New-style route stop favourites ─── */}
           {routeStopData.length > 0 && (
