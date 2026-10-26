@@ -455,6 +455,8 @@ const RouteCard: React.FC<RouteCardProps> = ({ entry, initialStopId }) => {
               fontWeight: 800,
               // letterSpacing: "0.06em",
               flexShrink: 0,
+              minWidth: "75px",
+              textAlign: "center",
             }}
           >
             {/[A-Z]$/.test(entry.route) ? (

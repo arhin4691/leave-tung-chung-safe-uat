@@ -218,7 +218,7 @@ const RouteKeyboard: React.FC<RouteKeyboardProps> = ({
               >
                 <div className="route-kb-display-inner">
                   {value ? (
-                    <span className="route-kb-display-value">
+                    <span className="route-kb-display-value" style={{ letterSpacing: "0.06em" }}>
                       {value.toUpperCase()}
                     </span>
                   ) : (
