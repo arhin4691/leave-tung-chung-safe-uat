@@ -16,11 +16,35 @@
   height: 100%;
 }
 
+.mapCanvas :global(.leaflet-tile) {
+  filter: grayscale(0.85) saturate(0.5);
+}
+
 .mapLegend {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   padding: 8px 2px 0;
+}
+
+.legendButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.legendButton:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 3px;
+}
+
+.legendButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .legendItem {
@@ -46,16 +70,76 @@
   background: #1683ff;
 }
 
+.stopPulseMarker,
+.userPulseMarker {
+  border: 0;
+  background: transparent;
+}
+
+.pulseDot {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.pulseDot::before,
+.pulseDot::after {
+  position: absolute;
+  inset: -3px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  animation: markerPulse 2s ease-out infinite;
+  content: "";
+  opacity: 0;
+}
+
+.pulseDot::after {
+  animation-delay: 1s;
+}
+
+.stopPulseDot {
+  background: #e53935;
+  color: #e53935;
+}
+
+.userPulseDot {
+  background: #1683ff;
+  color: #1683ff;
+}
+
+@keyframes markerPulse {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.65;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseDot::before,
+  .pulseDot::after {
+    animation: none;
+  }
+}
+
 .routeStopMarker {
-  background: #f59e0b;
+  background: #c17a13;
 }
 
 .routeLineMarker {
   width: 16px;
   height: 4px;
   border-radius: 999px;
-  background: #1677ff;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
+  background: #0f766e;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
 }
 
 .routeArrowMarker {
@@ -70,8 +154,8 @@
   place-items: center;
   border: 2px solid #fff;
   border-radius: 50%;
-  background: #1677ff;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+  background: #0f766e;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   color: #fff;
   font-size: 11px;
   line-height: 1;

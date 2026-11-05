@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import type { Map as LeafletMap } from "leaflet";
+import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import type {
   BusRouteShapeCollection,
   RouteShapeCoordinate,
@@ -173,7 +173,17 @@ const StopMap: React.FC<StopMapProps> = ({
 }) => {
   const { t } = useLocale();
   const mapElementRef = useRef<HTMLDivElement>(null);
-  const locationRequestedRef = useRef(false);
+  const userLocationRef = useRef<Coordinates | null>(null);
+  const userMarkerUpdaterRef = useRef<
+    ((location: Coordinates | null) => void) | null
+  >(null);
+  const userLocationPanRef = useRef<(() => void) | null>(null);
+  const selectedStopCoordinatesRef = useRef<Coordinates | null>(null);
+  const selectedStopUpdaterRef = useRef<
+    ((coordinates: Coordinates) => void) | null
+  >(null);
+  const routeStopsUpdaterRef = useRef<(() => void) | null>(null);
+  const currentStopIdRef = useRef(currentStopId);
   const loadedRouteKeyRef = useRef<string | null>(null);
   const requestedRouteKeyRef = useRef<string | null>(null);
   const routeStopsRef = useRef(routeStops);
@@ -188,6 +198,7 @@ const StopMap: React.FC<StopMapProps> = ({
   const [routeStatus, setRouteStatus] = useState<
     "idle" | "loading" | "available" | "unavailable" | "error"
   >("idle");
+  userLocationRef.current = userLocation;
 
   const hasCoordinates =
     lat !== undefined && long !== undefined && lat !== "" && long !== "";
@@ -195,6 +206,10 @@ const StopMap: React.FC<StopMapProps> = ({
   const longitude = Number(long);
   const validCoordinates =
     hasCoordinates && validLocation(latitude, longitude);
+  selectedStopCoordinatesRef.current = validCoordinates
+    ? { latitude, longitude }
+    : null;
+  currentStopIdRef.current = currentStopId;
   const routeStopIds = (routeStops ?? [])
     .map((stop) => stop.stopId)
     .filter(Boolean)
@@ -210,8 +225,7 @@ const StopMap: React.FC<StopMapProps> = ({
   ].join("|");
 
   useEffect(() => {
-    if (!active || !validCoordinates || locationRequestedRef.current) return;
-    locationRequestedRef.current = true;
+    if (!active || !validCoordinates) return;
 
     if (!navigator.geolocation) {
       setLocationStatus("unavailable");
@@ -219,7 +233,7 @@ const StopMap: React.FC<StopMapProps> = ({
     }
 
     setLocationStatus("locating");
-    navigator.geolocation.getCurrentPosition(
+    const watchId = navigator.geolocation.watchPosition(
       (position) => {
         setUserLocation({
           latitude: position.coords.latitude,
@@ -228,9 +242,24 @@ const StopMap: React.FC<StopMapProps> = ({
         setLocationStatus("available");
       },
       () => setLocationStatus("unavailable"),
-      { timeout: 8000, maximumAge: 60_000 },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 5_000 },
     );
+
+    return () => navigator.geolocation.clearWatch(watchId);
   }, [active, validCoordinates]);
+
+  useEffect(() => {
+    userMarkerUpdaterRef.current?.(userLocation);
+  }, [userLocation]);
+
+  useEffect(() => {
+    if (!validCoordinates) return;
+    selectedStopUpdaterRef.current?.({ latitude, longitude });
+  }, [latitude, longitude, validCoordinates]);
+
+  useEffect(() => {
+    routeStopsUpdaterRef.current?.();
+  }, [currentStopId, routeStops]);
 
   useEffect(() => {
     if (!active || !route || !company || !direction) return;
@@ -331,6 +360,7 @@ const StopMap: React.FC<StopMapProps> = ({
         map = leaflet.map(mapElementRef.current, {
           scrollWheelZoom: false,
         });
+        const mapInstance = map;
         leaflet
           .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution:
@@ -350,17 +380,17 @@ const StopMap: React.FC<StopMapProps> = ({
             leaflet
               .polyline(lineCoordinates, {
                 color: "#ffffff",
-                opacity: 0.78,
-                weight: 8,
+                opacity: 0.9,
+                weight: 7,
                 lineCap: "round",
                 lineJoin: "round",
               })
               .addTo(map);
             leaflet
               .polyline(lineCoordinates, {
-                color: "#1677ff",
-                opacity: 0.96,
-                weight: 4,
+                color: "#0f766e",
+                opacity: 0.85,
+                weight: 3,
                 lineCap: "round",
                 lineJoin: "round",
               })
@@ -380,45 +410,103 @@ const StopMap: React.FC<StopMapProps> = ({
           }
         }
 
-        for (const stop of routeStopsRef.current ?? []) {
-          if (stop.stopId === currentStopId) continue;
-          const stopLatitude = Number(stop.lat);
-          const stopLongitude = Number(stop.long);
-          if (!validLocation(stopLatitude, stopLongitude)) continue;
-          leaflet
-            .circleMarker([stopLatitude, stopLongitude], {
-              radius: 4,
-              color: "#ffffff",
-              weight: 1,
-              fillColor: "#f59e0b",
-              fillOpacity: 1,
-            })
-            .addTo(map);
-        }
+        const routeStopsLayer = leaflet.layerGroup().addTo(map);
+        const updateRouteStopMarkers = () => {
+          routeStopsLayer.clearLayers();
+          for (const stop of routeStopsRef.current ?? []) {
+            if (stop.stopId === currentStopIdRef.current) continue;
+            const stopLatitude = Number(stop.lat);
+            const stopLongitude = Number(stop.long);
+            if (!validLocation(stopLatitude, stopLongitude)) continue;
+            leaflet
+              .circleMarker([stopLatitude, stopLongitude], {
+                radius: 4,
+                color: "#ffffff",
+                weight: 1,
+                fillColor: "#c17a13",
+                fillOpacity: 1,
+              })
+              .addTo(routeStopsLayer);
+          }
+        };
+        routeStopsUpdaterRef.current = updateRouteStopMarkers;
+        updateRouteStopMarkers();
 
-        leaflet
-          .circleMarker([latitude, longitude], {
-            radius: 8,
-            color: "#ffffff",
-            weight: 2,
-            fillColor: "#e53935",
-            fillOpacity: 1,
-          })
+        const selectedStopIcon = leaflet.divIcon({
+          className: classes.stopPulseMarker,
+          html: `<span class="${classes.pulseDot} ${classes.stopPulseDot}" />`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+        });
+        const selectedCoordinates =
+          selectedStopCoordinatesRef.current ?? { latitude, longitude };
+        const panToMarker = (marker: LeafletMarker) => {
+          const { lat: markerLatitude, lng: markerLongitude } =
+            marker.getLatLng();
+          mapInstance.panTo([markerLatitude, markerLongitude], {
+            animate: true,
+            duration: 0.7,
+          });
+        };
+        const selectedMarker = leaflet
+          .marker(
+            [selectedCoordinates.latitude, selectedCoordinates.longitude],
+            {
+              icon: selectedStopIcon,
+              interactive: true,
+              title,
+            },
+          )
           .addTo(map);
+        selectedMarker.on("click", () => panToMarker(selectedMarker));
+        selectedStopUpdaterRef.current = (coordinates) => {
+          const target: [number, number] = [
+            coordinates.latitude,
+            coordinates.longitude,
+          ];
+          selectedMarker.setLatLng(target);
+          mapInstance.panTo(target, { animate: true, duration: 0.7 });
+        };
 
-        if (userLocation) {
-          leaflet
-            .circleMarker([userLocation.latitude, userLocation.longitude], {
-              radius: 8,
-              color: "#ffffff",
-              weight: 2,
-              fillColor: "#1683ff",
-              fillOpacity: 1,
+        let userMarker: LeafletMarker | null = null;
+        const updateUserMarker = (location: Coordinates | null) => {
+          if (!location) return;
+          const markerCoordinates: [number, number] = [
+            location.latitude,
+            location.longitude,
+          ];
+          if (userMarker) {
+            userMarker.setLatLng(markerCoordinates);
+            return;
+          }
+
+          const userIcon = leaflet.divIcon({
+            className: classes.userPulseMarker,
+            html: `<span class="${classes.pulseDot} ${classes.userPulseDot}" />`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
+          });
+          userMarker = leaflet
+            .marker(markerCoordinates, {
+              icon: userIcon,
+              interactive: true,
+              title: t("bus.currentLocation"),
             })
-            .addTo(map);
-        }
+            .addTo(mapInstance);
+          userMarker.on("click", () => {
+            if (userMarker) panToMarker(userMarker);
+          });
+        };
+        userLocationPanRef.current = () => {
+          if (userMarker) panToMarker(userMarker);
+        };
+        userMarkerUpdaterRef.current = updateUserMarker;
+        updateUserMarker(userLocationRef.current);
 
-        map.setView([latitude, longitude], 17);
+        map.setView(
+          [selectedCoordinates.latitude, selectedCoordinates.longitude],
+          17,
+        );
 
         window.requestAnimationFrame(() => map?.invalidateSize());
         setMapError(false);
@@ -433,20 +521,19 @@ const StopMap: React.FC<StopMapProps> = ({
     void initializeMap();
     return () => {
       cancelled = true;
+      userMarkerUpdaterRef.current = null;
+      userLocationPanRef.current = null;
+      selectedStopUpdaterRef.current = null;
+      routeStopsUpdaterRef.current = null;
       map?.remove();
     };
   }, [
     active,
     company,
-    currentStopId,
     direction,
-    latitude,
-    longitude,
     route,
     routeStatus,
     routeShape,
-    title,
-    userLocation,
     validCoordinates,
   ]);
 
@@ -494,14 +581,31 @@ const StopMap: React.FC<StopMapProps> = ({
             </span>
           </>
         )}
-        <span className={classes.legendItem}>
-          <span className={`${classes.legendMarker} ${classes.stopMarker}`} />
+        <button
+          type="button"
+          className={`${classes.legendItem} ${classes.legendButton}`}
+          onClick={() =>
+            selectedStopUpdaterRef.current?.({ latitude, longitude })
+          }
+        >
+          <span
+            className={`${classes.legendMarker} ${classes.stopMarker}`}
+            aria-hidden="true"
+          />
           {t("bus.stopLocation")}
-        </span>
-        <span className={classes.legendItem}>
-          <span className={`${classes.legendMarker} ${classes.userMarker}`} />
+        </button>
+        <button
+          type="button"
+          className={`${classes.legendItem} ${classes.legendButton}`}
+          onClick={() => userLocationPanRef.current?.()}
+          disabled={!userLocation}
+        >
+          <span
+            className={`${classes.legendMarker} ${classes.userMarker}`}
+            aria-hidden="true"
+          />
           {t("bus.currentLocation")}
-        </span>
+        </button>
       </div>
       {routeStatus === "available" && (
         <div className={classes.mapAttribution}>
