@@ -1,8 +1,20 @@
 import type { FavouriteList, FavouriteRoute, FavRouteStop } from "@/shared/types";
 
 export const FAVOURITE_LISTS_KEY = "favourite-lists-v2";
+export const FAVOURITE_TRANSFER_FORMAT = "leave-tung-chung-favourite-list";
 const LEGACY_KEYS = ["favourites", "likedRouteStop"] as const;
 const COMPANIES = ["KMB", "CTB", "NLB", "MTRBUS"] as const;
+const MAX_TRANSFER_BYTES = 1_000_000;
+const MAX_TRANSFER_ROUTES = 500;
+
+export interface FavouriteListTransfer {
+  format: typeof FAVOURITE_TRANSFER_FORMAT;
+  version: 1;
+  list: {
+    name: string;
+    routes: FavouriteRoute[];
+  };
+}
 
 function makeDefaultList(routes: FavouriteRoute[] = []): FavouriteList {
   return {
@@ -61,6 +73,96 @@ function uniqueRoutes(routes: FavouriteRoute[]): FavouriteRoute[] {
     seen.add(key);
     return true;
   });
+}
+
+export function createFavouriteListTransfer(
+  list: FavouriteList,
+): FavouriteListTransfer {
+  return {
+    format: FAVOURITE_TRANSFER_FORMAT,
+    version: 1,
+    list: { name: list.name, routes: list.routes },
+  };
+}
+
+export function parseFavouriteListTransfer(
+  value: unknown,
+): FavouriteListTransfer {
+  const record = asRecord(value);
+  if (
+    !record ||
+    record.format !== FAVOURITE_TRANSFER_FORMAT ||
+    record.version !== 1
+  ) {
+    throw new Error("Unsupported favourite list file.");
+  }
+
+  if (new TextEncoder().encode(JSON.stringify(value)).length > MAX_TRANSFER_BYTES) {
+    throw new Error("Favourite list file is too large.");
+  }
+
+  const list = asRecord(record.list);
+  if (
+    !list ||
+    typeof list.name !== "string" ||
+    !list.name.trim() ||
+    list.name.trim().length > 12 ||
+    !Array.isArray(list.routes) ||
+    list.routes.length > MAX_TRANSFER_ROUTES
+  ) {
+    throw new Error("Favourite list details are invalid.");
+  }
+
+  const routes = list.routes.map((item, index) => {
+    const rawRoute = asRecord(item);
+    const route = normalizeRoute(item);
+    const invalidLatitude =
+      route?.lat !== undefined &&
+      (!route.lat.trim() ||
+        !Number.isFinite(Number(route.lat)) ||
+        Math.abs(Number(route.lat)) > 90);
+    const invalidLongitude =
+      route?.long !== undefined &&
+      (!route.long.trim() ||
+        !Number.isFinite(Number(route.long)) ||
+        Math.abs(Number(route.long)) > 180);
+    if (
+      !rawRoute ||
+      !route ||
+      !route.stopId.trim() ||
+      route.stopId.length > 200 ||
+      !route.route.trim() ||
+      route.route.length > 100 ||
+      (rawRoute.dir !== "I" && rawRoute.dir !== "O") ||
+      invalidLatitude ||
+      invalidLongitude
+    ) {
+      throw new Error(`Favourite route ${index + 1} is invalid.`);
+    }
+
+    for (const key of [
+      "name_tc",
+      "name_en",
+      "lat",
+      "long",
+      "dest_tc",
+      "serviceType",
+      "routeId",
+    ]) {
+      const field = rawRoute[key];
+      if (field !== undefined && (typeof field !== "string" || field.length > 200)) {
+        throw new Error(`Favourite route ${index + 1} is invalid.`);
+      }
+    }
+
+    return route;
+  });
+
+  return {
+    format: FAVOURITE_TRANSFER_FORMAT,
+    version: 1,
+    list: { name: list.name.trim(), routes: uniqueRoutes(routes) },
+  };
 }
 
 function parseLegacyRoutes(raw: string, key: string): FavouriteRoute[] {
@@ -181,6 +283,52 @@ export function createFavouriteList(name: string): FavouriteList | null {
   };
   saveFavouriteLists([...lists, list]);
   return list;
+}
+
+export function createFavouriteListFromTransfer(
+  name: string,
+  routes: FavouriteRoute[],
+): FavouriteList {
+  const cleanName = name.trim();
+  const lists = getFavouriteLists();
+  if (!cleanName || cleanName.length > 12) {
+    throw new Error("Favourite list name is invalid.");
+  }
+  if (
+    lists.some(
+      (list) => list.name.toLocaleLowerCase() === cleanName.toLocaleLowerCase(),
+    )
+  ) {
+    throw new Error("A favourite list with this name already exists.");
+  }
+
+  const list: FavouriteList = {
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `list-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    name: cleanName,
+    routes: uniqueRoutes(routes),
+    isDefault: false,
+    createdAt: Date.now(),
+  };
+  saveFavouriteLists([...lists, list]);
+  return list;
+}
+
+export function replaceFavouriteListRoutes(
+  id: string,
+  routes: FavouriteRoute[],
+): FavouriteList[] {
+  const lists = getFavouriteLists();
+  if (!lists.some((list) => list.id === id)) {
+    throw new Error("Favourite list to replace was not found.");
+  }
+  return saveFavouriteLists(
+    lists.map((list) =>
+      list.id === id ? { ...list, routes: uniqueRoutes(routes) } : list,
+    ),
+  );
 }
 
 export function renameFavouriteList(id: string, name: string): boolean {

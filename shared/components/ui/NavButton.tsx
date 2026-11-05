@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import classes from "./NavButton.module.css";
-import { useTheme } from "@/shared/context/theme-context";
 import { useLocale } from "@/shared/context/locale-context";
 import { Grid } from "@mui/material";
-import AboutModal from "@/shared/components/home/components/AboutModal";
 
 // ── SVG Icons ────────────────────────────────────────────────────
 const HomeIcon = () => (
@@ -79,54 +77,19 @@ const GearIcon = () => (
   </svg>
 );
 
-const SunIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="4" />
-    <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-  </svg>
-);
-
 // ── Nav items — 4 items: Home · Bus · MTR · Settings ────────────
 const NAV_ITEMS = [
   { href: "/", Icon: HomeIcon, labelKey: "nav.home" as const },
   { href: "/go_back", Icon: BusIcon, labelKey: "nav.bus" as const },
   { href: "/mtr", Icon: MTRIcon, labelKey: "nav.mtr" as const },
+  { href: "/settings", Icon: GearIcon, labelKey: "settings.title" as const },
 ];
 
 // ── Component ────────────────────────────────────────────────────
 const NavButton: React.FC = () => {
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
-  const { locale, t, toggleLocale } = useLocale();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { t } = useLocale();
   const [isDesktop, setIsDesktop] = useState(false);
-
-  const settingsBtnRef = useRef<HTMLButtonElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
 
   // Detect desktop breakpoint after hydration
   useEffect(() => {
@@ -137,88 +100,11 @@ const NavButton: React.FC = () => {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Close popover when clicking outside
-  useEffect(() => {
-    if (!settingsOpen) return;
-    const handler = (e: MouseEvent) => {
-      const inBtn = settingsBtnRef.current?.contains(e.target as Node);
-      const inPopover = popoverRef.current?.contains(e.target as Node);
-      if (!inBtn && !inPopover) setSettingsOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [settingsOpen]);
-
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  const isZh = locale === "zh-HK";
-
   return (
     <>
-      {/* ── Settings popover ──────────────────────────────────────
-          Hoisted OUTSIDE the dock to escape framer-motion's CSS
-          stacking context (transform creates a new stacking ctx).
-          position:fixed + z-index:150 ensures it renders above
-          the nav dock (z-index:100) and below modals (z-index:500). */}
-      <AnimatePresence>
-        {settingsOpen && (
-          <div
-            ref={popoverRef}
-            style={
-              isDesktop
-                /* Desktop: popover floats to the right of the 220px sidebar */
-                ? { position: "fixed", bottom: 80, left: 232, zIndex: 150 }
-                /* Mobile: popover floats above centre of bottom dock */
-                : { position: "fixed", bottom: 90, left: "50%", zIndex: 150, width: "80%" }
-            }
-          >
-            <motion.div
-              className={classes.settingsPopover}
-              initial={{ opacity: 0, scale: 0.86, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.86, y: 8 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            >
-              <button
-                className={classes.popoverRow}
-                onClick={() => {
-                  toggleTheme();
-                  setSettingsOpen(false);
-                }}
-              >
-                <span>
-                  {theme === "dark" ? t("settings.lightMode") : t("settings.darkMode")}
-                </span>
-                <span className={classes.popoverAccessory}>
-                  {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-                </span>
-              </button>
-              <button
-                className={classes.popoverRow}
-                onClick={() => {
-                  toggleLocale();
-                  setSettingsOpen(false);
-                }}
-              >
-                <span>{isZh ? "Switch to English" : "切換中文"}</span>
-                <span
-                  className={classes.popoverAccessory}
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {isZh ? "EN" : "中"}
-                </span>
-              </button>
-              <AboutModal version="1.04" releaseDate="2026-04-09" classes={classes} />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       {/* ── Dock pill ─────────────────────────────────────────── */}
       <motion.nav
         className={classes["dock"]}
@@ -279,7 +165,7 @@ const NavButton: React.FC = () => {
                   )}
                   <Link
                     href={item.href}
-                    className={`${classes.item} ${active ? classes.itemActive : ""}`}
+                    className={`${classes.item} ${item.href === "/settings" ? classes.settingsNavItem : ""} ${active ? classes.itemActive : ""}`}
                     aria-current={active ? "page" : undefined}
                     aria-label={t(item.labelKey)}
                   >
@@ -294,49 +180,6 @@ const NavButton: React.FC = () => {
               </Grid>
             );
           })}
-          {/* 5th item: Settings — styled like a nav item but is a button */}
-
-          <Grid item xs={3} style={{ position: "relative" }}>
-            <motion.div
-              style={{
-                position: "relative",
-                alignItems: "center",
-                justifyContent: "center",
-                display: "flex",
-              }}
-              whileTap={{ scale: 0.86 }}
-              initial={{ opacity: 1, y: 0 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                type: "spring",
-                stiffness: 360,
-                damping: 28,
-                delay: 0.06 * 4,
-              }}
-            >
-              {settingsOpen && (
-                <motion.div
-                  layoutId="navActivePill"
-                  className={classes.activePill}
-                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                />
-              )}
-              <button
-                ref={settingsBtnRef}
-                className={`${classes.item} ${classes.settingsNavItem} ${settingsOpen ? classes.itemActive : ""}`}
-                onClick={() => setSettingsOpen((o) => !o)}
-                aria-label={t("settings.title")}
-                aria-expanded={settingsOpen}
-              >
-                <span className={classes.itemIcon}>
-                  <GearIcon />
-                </span>
-                <span className={classes.itemLabel}>
-                  {t("settings.title")}
-                </span>
-              </button>
-            </motion.div>
-          </Grid>
         </Grid>
       </motion.nav>
     </>

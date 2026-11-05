@@ -28,6 +28,7 @@ const itemVariants = {
 export default function Home() {
   const { t } = useLocale();
   const UPDATES = [
+    { date: "2026-11-05", info: t("update.2026-11-05"), version: "1.2" },
     { date: "2026-10-25", info: t("update.2026-10-25"), version: "1.1" },
     { date: "2026-04-09", info: t("update.2026-04-09"), version: "1.04" },
     { date: "2026-04-06", info: t("update.2026-04-06"), version: "1.03" },
